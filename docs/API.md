@@ -5,7 +5,7 @@ The codebase exposes a stable public Python API in the `api/` directory. You can
 ## Import the API
 
 ```python
-from api import analyze_strip, build_model_from_colors, save_model
+from api import analyze_strip, build_model_from_colors, save_model, evaluate_diagnoses
 ```
 
 ## 1. Calibration API
@@ -39,14 +39,28 @@ A dictionary mapping the analyte name (e.g. `"glucose"`) to an `AnalysisResult` 
 *   **`color_rgb (tuple)`**: The final sampled median color (R, G, B) of the central 75% of the pad.
 *   **`value (float | str)`**: The computed numeric concentration or string category (e.g., `'POSITIVE'`).
 *   **`unit (str)`**: The unit of measurement (e.g., `'mg/dL'`).
-*   **`confidence (float)`**: A 0.0 to 1.0 confidence score, derived from the $\Delta E$ perceptual color distance from the exact chart swatch.
+*   **`confidence (float)`**: A 0.0 to 1.0 confidence score, derived from Euclidean Projection onto the 3D polynomial curve.
+
+---
+
+## 3. Clinical Diagnostic API
+
+### `evaluate_diagnoses(results: dict[str, Any]) -> list[str]`
+
+Takes the dictionary output directly from `analyze_strip()` and passes it through the Clinical Classifier rule engine to screen for pathological configurations.
+
+**Parameters:**
+*   `results`: The `dict[str, AnalysisResult]` output mapping returned by the `analyze_strip()` function.
+
+**Returns:**
+A `list` of strings containing the formal clinical diagnoses (e.g., `['Gram-Negative Bacterial UTI (e.g. E. coli or Klebsiella) - Indicated by Positive Leukocyte Esterase combined with nitrate reductase activity (Positive Nitrite).']`). If no pathology is matched, it returns `['Normal - No significant pathogenic biomarker combinations detected.']`.
 
 ---
 
 ### Example End-to-End Pipeline
 ```python
 import json
-from api import analyze_strip, build_model_from_colors, save_model
+from api import analyze_strip, build_model_from_colors, save_model, evaluate_diagnoses
 
 # 1. Calibrate (only needs to be run once)
 model = build_model_from_colors("config/chart_colors.json")
@@ -67,4 +81,9 @@ results = analyze_strip(
 glucose = results["glucose"]
 print(f"Glucose: {glucose.value} {glucose.unit} (Confidence: {glucose.confidence:.0%})")
 print(f"Pad Median Color (RGB): {glucose.color_rgb}")
+
+# 4. Clinically Validate
+diagnoses = evaluate_diagnoses(results)
+for diagnosis in diagnoses:
+    print(diagnosis)
 ```
