@@ -13,7 +13,6 @@ import cv2
 import pytest
 
 from core.calibration import CalibrationModel, Swatch, AnalyteCalibration
-from core.color_utils import rgb_to_lab
 
 
 # ---------------------------------------------------------------------------
@@ -113,6 +112,7 @@ class TestCalibrationModel:
         neg_rgb = colour_map["glucose"]["NEGATIVE"]
         value, unit, confidence = model.get_concentration("glucose", neg_rgb)
         assert unit == "mmol/L"
+        assert value == "NEGATIVE"
         assert confidence > 0.5
 
     def test_categorical_prediction(self, tmp_path):
@@ -144,7 +144,8 @@ class TestCalibrationModel:
         v1, u1, c1 = model.get_concentration("glucose", neg_rgb)
         v2, u2, c2 = loaded.get_concentration("glucose", neg_rgb)
         assert u1 == u2
-        assert abs(float(v1) - float(v2)) < 0.01
+        assert v1 == v2
+        assert v1 == "NEGATIVE"
 
     def test_load_nonexistent_raises(self, tmp_path):
         with pytest.raises(FileNotFoundError):

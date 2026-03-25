@@ -1,6 +1,6 @@
 # Urinalysis Strip Analyzer
 
-A Python project for automated urinalysis strip reading using colour science and computer vision.
+A Python project for automated urinalysis strip reading using **3D Piecewise Polyline RGB Projection** and computer vision.
 
 📄 **Documentation:**
 - **[README.md](README.md)** — Quick-start (you are here)

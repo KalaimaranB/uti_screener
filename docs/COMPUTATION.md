@@ -20,75 +20,61 @@ Chart image / RGB values
 
 ---
 
-## Step 1 — Colour Space: Why CIELAB?
+## Step 1 — Colour Space: Chromaticity Normalization (Hue Ratios)
 
-All colour comparisons are done in **CIELAB** colour space, not RGB.
+All colour comparisons are done directly in **Chromaticity Vector Space**.
 
-| Space | Problem |
-|-------|---------|
-| RGB | Euclidean distance does *not* correspond to perceptual difference. Two colours that *look* identical can be far apart in RGB (e.g. due to gamma). |
-| CIELAB | Designed so that equal Euclidean distances correspond to equal perceived differences. A delta-E of ~2.3 is typically the "just noticeable difference" threshold. |
+If we simply used raw RGB distance, a dark shadow caused by poor camera lighting (which drops Red, Green, and Blue proportionally) would mathematically mimic the physical darkness of a dark-colour reagent pad (like Glucose ++++). 
 
-Conversion pipeline:
+To cleanly separate **Chemical Hue** from **Camera Lighting**, the model divides every RGB pixel by the sum of its channels to find its pure Hue Ratios:
+
 ```
-RGB (0–255)  →  linear RGB (0–1)  →  CIE XYZ  →  CIELAB (L*, a*, b*)
+R_chroma = (R / (R + G + B)) * 255
+G_chroma = (G / (R + G + B)) * 255
+B_chroma = (B / (R + G + B)) * 255
 ```
-Implemented via `skimage.color.rgb2lab` with the D65 standard illuminant.
+
+This enforces strict linear weightings (`a*R + b*G + c*B`) where differences in a specific dye colour (like a drop in Green for the pink Nitrite pad) are overwhelmingly punished, while generic lighting shadows are mathematically erased.
 
 ---
 
-## Step 2 — Colour Distance: CIE76 Delta-E
+## Step 2 — Colour Distance: Euclidean Distance
 
-The distance between two colours in the model is:
+The distance between two colours is the standard 3D Pythagorean distance between their purely normalized Chromaticity vectors:
 
 ```
-ΔE = √( (L₁−L₂)² + (a₁−a₂)² + (b₁−b₂)² )
+Distance = √( (R₁−R₂)² + (G₁−G₂)² + (B₁−B₂)² )
 ```
 
-This is CIE76. ΔE < 5 is considered a good match. ΔE > 25 means the colours are very different.
+Because Chromaticity space is smaller and tighter than raw RGB, a distance < 5 is considered a near-perfect match.
 
 ---
 
-## Step 3 — Swatch Grouping (handling NEGATIVE ranges)
+## Step 3 — Negative Swatch Segments (The Zero-Zone)
 
-Some analytes (glucose, bilirubin) have two "negative" swatches on the chart — both map to value 0, but cover a range of colours.
+Some analytes (glucose, bilirubin) have two "negative" swatches on the chart — both correspond to a concentration value of `0`, but cover slightly different background colours.
 
-Before interpolation, all swatches sharing the same concentration value are **collapsed to their LAB centroid**:
-
-```
-centroid_L = mean(L₁, L₂, ...)
-centroid_a = mean(a₁, a₂, ...)
-centroid_b = mean(b₁, b₂, ...)
-```
-
-This means NEGATIVE_1 and NEGATIVE_2 together define the "zero zone", and anything closer to that centroid than to the next swatch maps to 0.
+The model preserves both of these separate colours as explicit `0` reference points in the continuous matrix.
 
 ---
 
-## Step 4 — Concentration Interpolation
+## Step 4 — Concentration: 3D Piecewise Polyline Projection
 
-For **numeric analytes** (glucose, pH, etc.):
+The model uses a continuous **Piecewise 3D Polyline Projection**.
 
-1. Compute ΔE from the strip colour to every reference swatch centroid.
-2. Take the two closest reference points `(v₁, ΔE₁)` and `(v₂, ΔE₂)`.
-3. Compute weights inversely proportional to distance:
-   ```
-   w₁ = 1 − ΔE₁ / (ΔE₁ + ΔE₂)
-   w₂ = 1 − ΔE₂ / (ΔE₁ + ΔE₂)
-   interpolated = (w₁·v₁ + w₂·v₂) / (w₁ + w₂)
-   ```
-4. This is **inverse-distance weighting** — the closer colour dominates.
+1. The set of calibrated reference swatches forms a connected, structural trajectory line bending through the 3D Chromaticity space (e.g. `Light Blue -> Green -> Brown`).
+2. When the system reads a new pixel colour `C`, it calculates the shortest, perpendicular mathematically projected distance to every straight segment on that line.
+3. The coordinate that drops strictly onto that line segment perfectly dictates the **interpolated concentration fraction**.
+4. By forcing the prediction to snap strictly onto the structural timeline between known chemical states, it guarantees the prediction can never wildly jump far out-of-bounds due to camera noise or glare.
 
-For **categorical analytes** (nitrite):
-
-- Simply return the label of the nearest swatch (no interpolation).
+If the returned numerical concentration happens to evaluate exactly onto the flat segment connecting two zero-value nodes (like `NEGATIVE_1` to `NEGATIVE_2`), the algorithm intercepts the result and explicitly prints the **"NEGATIVE"** string literal instead of `0.0`.
 
 ---
 
 ## Step 5 — Confidence Score
 
 ```
-confidence = max(0, 1 − ΔE_best / 50)
+confidence = max(0, 1 − Perpendicular_Distance / 100.0)
 ```
 
 | Confidence | Meaning |
@@ -98,7 +84,7 @@ confidence = max(0, 1 − ΔE_best / 50)
 | 0.5–0.8 | Moderate match — result is plausible but lighting/camera may differ |
 | < 0.5 | Poor match — treat result as approximate |
 
-The denominator `50` is the normalisation constant — a ΔE of 50 is a very large perceptual difference (e.g. red vs. teal). You can adjust this in `color_utils.py` if you want stricter or looser confidence thresholds.
+The denominator `100.0` is the normalisation constant in Chromaticity space. You can adjust this in `color_utils.py` if you want stricter or looser confidence thresholds.
 
 ---
 
@@ -160,20 +146,8 @@ scale_b = 128 / grey[2]
 corrected_rgb = (min(255, r * scale_r), ...)
 ```
 
-### 6. Upgrade to CIE2000 delta-E (future work)
-CIE76 (current) is fast and simple, but CIE2000 is more perceptually accurate, especially for low-chroma (pale/washed-out) colours like many strip swatches. Switching would improve confidence on analytes like nitrite and protein.
-
-Replace in `core/color_utils.py`:
-```python
-# Current — CIE76:
-return math.sqrt((L1-L2)**2 + (a1-a2)**2 + (b1-b2)**2)
-
-# Improved — would require implementing CIEDE2000 formula:
-return ciede2000(lab1, lab2)
-```
-
-### 7. Collect a training dataset and fit a proper model
-The current approach is pure physical interpolation. If you collect many strip images with known ground-truth results, you can train a small regression model (e.g. k-NN or a 3-layer MLP) per analyte using LAB as input and concentration as output. This handles camera-specific colour shifts automatically.
+### 6. Collect a training dataset and fit a proper model
+The current approach is pure physical interpolation. If you collect many strip images with known ground-truth results, you can train a small regression model (e.g. k-NN or a 3-layer MLP) per analyte using RGB as input and concentration as output. This handles camera-specific colour shifts automatically.
 
 ---
 

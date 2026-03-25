@@ -15,7 +15,7 @@ from typing import Union
 import cv2
 import numpy as np
 
-from .color_utils import rgb_to_lab, interpolate_concentration, LAB, RGB
+from .color_utils import interpolate_concentration, RGB
 
 
 # ---------------------------------------------------------------------------
@@ -28,7 +28,6 @@ class Swatch:
     label: str
     value: Union[float, str]
     rgb: RGB
-    lab: LAB
 
 
 @dataclass
@@ -40,31 +39,16 @@ class AnalyteCalibration:
     swatches: list[Swatch] = field(default_factory=list)
 
     def predict(self, color_rgb: RGB) -> tuple[Union[float, str], float]:
-        """Return (concentration, confidence) for a given RGB colour.
-
-        Swatches that share the same ``value`` (e.g. NEGATIVE_1 / NEGATIVE_2)
-        are collapsed into a single centroid LAB reference point before
-        interpolation, so they jointly define a colour zone rather than
-        competing as separate candidates.
-        """
-        color_lab = rgb_to_lab(color_rgb)
-
-        # --- Group swatches by value → centroid LAB ---
-        groups: dict[Union[float, str], list] = {}
-        for s in self.swatches:
-            groups.setdefault(s.value, []).append(s.lab)
-
+        """Return (concentration, confidence) for a given RGB colour."""
         reference_points = [
             {
-                "lab": tuple(
-                    sum(ch) / len(labs) for ch in zip(*labs)
-                ),
-                "value": value,
+                "rgb": s.rgb,
+                "value": s.value,
             }
-            for value, labs in groups.items()
+            for s in self.swatches
         ]
 
-        return interpolate_concentration(color_lab, reference_points)
+        return interpolate_concentration(color_rgb, reference_points)
 
 
 # ---------------------------------------------------------------------------
@@ -157,7 +141,6 @@ class CalibrationModel:
                     label=swatch_cfg["label"],
                     value=swatch_cfg["value"],
                     rgb=median_rgb,
-                    lab=rgb_to_lab(median_rgb),
                 )
                 analyte_cal.swatches.append(swatch)
 
@@ -214,7 +197,6 @@ class CalibrationModel:
                     label=swatch_cfg["label"],
                     value=swatch_cfg["value"],
                     rgb=rgb,
-                    lab=rgb_to_lab(rgb),
                 )
                 analyte_cal.swatches.append(swatch)
 
@@ -280,7 +262,6 @@ class CalibrationModel:
                         "label": s.label,
                         "value": s.value,
                         "rgb": list(s.rgb),
-                        "lab": list(s.lab),
                     }
                     for s in cal.swatches
                 ],
@@ -311,7 +292,6 @@ class CalibrationModel:
                         label=s["label"],
                         value=s["value"],
                         rgb=tuple(s["rgb"]),    # type: ignore
-                        lab=tuple(s["lab"]),    # type: ignore
                     )
                 )
             model._analytes[name] = cal
