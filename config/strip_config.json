@@ -1,0 +1,28 @@
+{
+  "_comment": "Order of reagent pads from top to bottom on the strip. Must match chart_rois.json analyte keys.",
+  "pre_cropped": true,
+  "boxes_top_to_bottom": [
+    "leukocytes",
+    "nitrite",
+    "urobilinogen",
+    "protein",
+    "pH",
+    "blood",
+    "sp_gravity",
+    "ketone",
+    "bilirubin",
+    "glucose"
+  ],
+  "strip_detection": {
+    "_comment": "HSV range used to detect the border color drawn by the CV system around the strip.",
+    "border_color": "magenta",
+    "hsv_lower": [130, 80, 80],
+    "hsv_upper": [170, 255, 255]
+  },
+  "template_mask": {
+    "_comment": "Set these overrides (pixels) to manually override the automatic geometry detection. If any is null, auto-search is used.",
+    "manual_pad_h": null,
+    "manual_gap_h": null,
+    "manual_y_offset": null
+  }
+}

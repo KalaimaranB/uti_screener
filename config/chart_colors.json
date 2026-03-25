@@ -1,0 +1,550 @@
+{
+  "_comment": "Direct RGB values for each swatch — measured with Digital Color Meter (or any eyedropper tool). Use this instead of chart_rois.json if you don't want to deal with pixel coordinates.",
+  "_instructions": "Open your chart image, hover Digital Color Meter over the CENTER of each swatch, and copy the R/G/B values here.",
+  "leukocytes": {
+    "unit": "cells/uL",
+    "type": "numeric",
+    "swatches": [
+      {
+        "label": "NEGATIVE",
+        "value": 0,
+        "rgb": [
+          253,
+          248,
+          195
+        ]
+      },
+      {
+        "label": "TRACE",
+        "value": 15,
+        "rgb": [
+          227,
+          219,
+          179
+        ]
+      },
+      {
+        "label": "SMALL",
+        "value": 75,
+        "rgb": [
+          199,
+          159,
+          151
+        ]
+      },
+      {
+        "label": "MODERATE",
+        "value": 125,
+        "rgb": [
+          159,
+          122,
+          151
+        ]
+      },
+      {
+        "label": "LARGE",
+        "value": 500,
+        "rgb": [
+          106,
+          84,
+          122
+        ]
+      }
+    ]
+  },
+  "nitrite": {
+    "unit": "categorical",
+    "type": "categorical",
+    "swatches": [
+      {
+        "label": "NEGATIVE",
+        "value": "NEGATIVE",
+        "rgb": [
+          253,
+          250,
+          225
+        ]
+      },
+      {
+        "label": "POSITIVE",
+        "value": "POSITIVE",
+        "rgb": [
+          237,
+          184,
+          200
+        ]
+      }
+    ]
+  },
+  "urobilinogen": {
+    "unit": "umol/L",
+    "type": "numeric",
+    "swatches": [
+      {
+        "label": "NORMAL",
+        "value": 3.2,
+        "rgb": [
+          247,
+          213,
+          179
+        ]
+      },
+      {
+        "label": "NORMAL_2",
+        "value": 16,
+        "rgb": [
+          237,
+          172,
+          139
+        ]
+      },
+      {
+        "label": "+",
+        "value": 32,
+        "rgb": [
+          227,
+          136,
+          148
+        ]
+      },
+      {
+        "label": "++",
+        "value": 64,
+        "rgb": [
+          215,
+          118,
+          130
+        ]
+      },
+      {
+        "label": "+++",
+        "value": 128,
+        "rgb": [
+          220,
+          90,
+          130
+        ]
+      }
+    ]
+  },
+  "protein": {
+    "unit": "g/L",
+    "type": "numeric",
+    "swatches": [
+      {
+        "label": "NEGATIVE",
+        "value": 0,
+        "rgb": [
+          224,
+          229,
+          139
+        ]
+      },
+      {
+        "label": "TRACE",
+        "value": 0.3,
+        "rgb": [
+          193,
+          214,
+          121
+        ]
+      },
+      {
+        "label": "+",
+        "value": 1.0,
+        "rgb": [
+          180,
+          211,
+          139
+        ]
+      },
+      {
+        "label": "++",
+        "value": 3.0,
+        "rgb": [
+          115,
+          176,
+          169
+        ]
+      },
+      {
+        "label": "+++",
+        "value": 20,
+        "rgb": [
+          65,
+          146,
+          148
+        ]
+      }
+    ]
+  },
+  "pH": {
+    "unit": "pH",
+    "type": "numeric",
+    "swatches": [
+      {
+        "label": "5.0",
+        "value": 5.0,
+        "rgb": [
+          231,
+          144,
+          92
+        ]
+      },
+      {
+        "label": "6.0",
+        "value": 6.0,
+        "rgb": [
+          237,
+          169,
+          100
+        ]
+      },
+      {
+        "label": "6.5",
+        "value": 6.5,
+        "rgb": [
+          244,
+          198,
+          122
+        ]
+      },
+      {
+        "label": "7.0",
+        "value": 7.0,
+        "rgb": [
+          205,
+          190,
+          111
+        ]
+      },
+      {
+        "label": "7.5",
+        "value": 7.5,
+        "rgb": [
+          138,
+          148,
+          93
+        ]
+      },
+      {
+        "label": "8.0",
+        "value": 8.0,
+        "rgb": [
+          109,
+          171,
+          147
+        ]
+      },
+      {
+        "label": "8.5",
+        "value": 8.5,
+        "rgb": [
+          55,
+          125,
+          128
+        ]
+      }
+    ]
+  },
+  "blood": {
+    "unit": "cells/uL",
+    "type": "numeric",
+    "swatches": [
+      {
+        "label": "NEGATIVE",
+        "value": 0,
+        "rgb": [
+          200,
+          177,
+          95
+        ]
+      },
+      {
+        "label": "NON-HEMOLYZED",
+        "value": 10,
+        "rgb": [
+          195,
+          172,
+          94
+        ]
+      },
+      {
+        "label": "TRACE",
+        "value": 10,
+        "rgb": [
+          200,
+          163,
+          82
+        ]
+      },
+      {
+        "label": "SMALL",
+        "value": 25,
+        "rgb": [
+          160,
+          156,
+          94
+        ]
+      },
+      {
+        "label": "MODERATE",
+        "value": 80,
+        "rgb": [
+          125,
+          155,
+          125
+        ]
+      },
+      {
+        "label": "LARGE",
+        "value": 200,
+        "rgb": [
+          84,
+          127,
+          109
+        ]
+      }
+    ]
+  },
+  "sp_gravity": {
+    "unit": "SG",
+    "type": "numeric",
+    "swatches": [
+      {
+        "label": "1.000",
+        "value": 1.000,
+        "rgb": [
+          48,
+          111,
+          124
+        ]
+      },
+      {
+        "label": "1.005",
+        "value": 1.005,
+        "rgb": [
+          85,
+          116,
+          103
+        ]
+      },
+      {
+        "label": "1.010",
+        "value": 1.010,
+        "rgb": [
+          126,
+          136,
+          108
+        ]
+      },
+      {
+        "label": "1.015",
+        "value": 1.015,
+        "rgb": [
+          153,
+          142,
+          71
+        ]
+      },
+      {
+        "label": "1.020",
+        "value": 1.020,
+        "rgb": [
+          173,
+          162,
+          72
+        ]
+      },
+      {
+        "label": "1.025",
+        "value": 1.025,
+        "rgb": [
+          192,
+          168,
+          72
+        ]
+      },
+      {
+        "label": "1.030",
+        "value": 1.030,
+        "rgb": [
+          204,
+          173,
+          71
+        ]
+      }
+    ]
+  },
+  "ketone": {
+    "unit": "mmol/L",
+    "type": "numeric",
+    "swatches": [
+      {
+        "label": "NEGATIVE",
+        "value": 0,
+        "rgb": [
+          242,
+          190,
+          155
+        ]
+      },
+      {
+        "label": "TRACE",
+        "value": 0.5,
+        "rgb": [
+          234,
+          162,
+          142
+        ]
+      },
+      {
+        "label": "SMALL",
+        "value": 1.5,
+        "rgb": [
+          228,
+          137,
+          142
+        ]
+      },
+      {
+        "label": "MODERATE",
+        "value": 4.0,
+        "rgb": [
+          187,
+          95,
+          117
+        ]
+      },
+      {
+        "label": "LARGE",
+        "value": 16.0,
+        "rgb": [
+          111,
+          46,
+          88
+        ]
+      }
+    ]
+  },
+  "bilirubin": {
+    "unit": "umol/L",
+    "type": "numeric",
+    "swatches": [
+      {
+        "label": "NEGATIVE_1",
+        "value": 0,
+        "rgb": [
+          253,
+          250,
+          225
+        ]
+      },
+      {
+        "label": "NEGATIVE_2",
+        "value": 0,
+        "rgb": [
+          248,
+          224,
+          154
+        ]
+      },
+      {
+        "label": "SMALL",
+        "value": 17,
+        "rgb": [
+          242,
+          190,
+          139
+        ]
+      },
+      {
+        "label": "MODERATE",
+        "value": 50,
+        "rgb": [
+          199,
+          149,
+          139
+        ]
+      },
+      {
+        "label": "LARGE",
+        "value": 100,
+        "rgb": [
+          165,
+          129,
+          132
+        ]
+      }
+    ]
+  },
+  "glucose": {
+    "unit": "mmol/L",
+    "type": "numeric",
+    "swatches": [
+      {
+        "label": "NEGATIVE_1",
+        "value": 0,
+        "rgb": [
+          134,
+          201,
+          218
+        ]
+      },
+      {
+        "label": "NEGATIVE_2",
+        "value": 0,
+        "rgb": [
+          156,
+          206,
+          188
+        ]
+      },
+      {
+        "label": "TRACE",
+        "value": 5,
+        "rgb": [
+          164,
+          206,
+          154
+        ]
+      },
+      {
+        "label": "+",
+        "value": 15,
+        "rgb": [
+          146,
+          170,
+          113
+        ]
+      },
+      {
+        "label": "++",
+        "value": 30,
+        "rgb": [
+          159,
+          141,
+          77
+        ]
+      },
+      {
+        "label": "+++",
+        "value": 60,
+        "rgb": [
+          150,
+          107,
+          51
+        ]
+      },
+      {
+        "label": "++++",
+        "value": 110,
+        "rgb": [
+          129,
+          91,
+          50
+        ]
+      }
+    ]
+  }
+}
