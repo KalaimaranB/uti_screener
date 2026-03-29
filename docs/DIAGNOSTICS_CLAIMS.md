@@ -27,6 +27,8 @@ Urinary Tract Infections elicit an immune inflammatory response, typically raisi
 ### 3. Renal Disease / Glomerulonephritis
 The kidneys' glomeruli typically prevent large macro-molecules like **Protein** (specifically albumin) from entering the urine [[NBK564390]](https://www.ncbi.nlm.nih.gov/books/NBK564390/). Persistent proteinuria is a primary early indicator of kidney disease, such as Diabetic Nephropathy or Glomerulonephritis [[NBK564390]](https://www.ncbi.nlm.nih.gov/books/NBK564390/). Because transient trace amounts can be benign—often caused by dehydration, fever, or strenuous exercise—the diagnostic classifier triggers clinically significant warnings only on `>` Trace amounts [[PMC12703532]](https://pmc.ncbi.nlm.nih.gov/articles/PMC12703532/).
 
+And for specifc gravity: https://labpedia.net/urine-specific-gravity-and-its-significance/
+
 ---
 
 ## Literature Verification Mapping
