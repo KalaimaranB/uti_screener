@@ -41,20 +41,21 @@ def evaluate_diagnoses(results: dict[str, Any]) -> list[str]:
             else:
                 diagnoses.append("Gram-Positive Bacterial UTI (e.g. Staphylococcus or Enterococcus) - Indicated by pyuria (Positive Leukocytes) without nitrate reductase.")
 
-    # 2. Diabetes / DKA
-    if glucose > 0:
-        if ketone > 0.5:
-            diagnoses.append("Diabetic Ketoacidosis (DKA) - Severe metabolic state indicated by concomitant glucosuria and ketonuria.")
-        else:
-            diagnoses.append("Poorly Controlled Diabetes - Indicated by glucosuria exceeding the renal reabsorption threshold.")
 
-    # 3. Liver Disease
-    if bilirubin > 0 or urobilinogen > 3.2:
-        diagnoses.append("Hepatic/Biliary Pathology - Evidenced by elevated bilirubin or excessive urobilinogen excretion.")
+    # 2. Liver & Biliary Screening
+    # Bilirubin: Any positive result (>0) is abnormal.
+    # Urobilinogen: >1.0 mg/dL is usually the upper limit of normal; >2.0 is clinically significant.
+    if bilirubin > 0:
+        diagnoses.append("Bilirubinuria detected - Possible Cholestasis or Hepatocellular injury.")
+
+    if urobilinogen > 2.0:
+        diagnoses.append("Elevated Urobilinogen - Suggestive of Hepatic Pathology or Hemolysis.")
+    elif urobilinogen == 0 and bilirubin > 0:
+        diagnoses.append("Bilirubinuria with Absent Urobilinogen - Possible Biliary Obstruction.")
 
     # 4. Kidney Disease
     # Normal protein is 'NEGATIVE'. Small/Trace is 0.3 g/L. >0.3 is proteinuria.
-    if protein > 0.5:
+    if protein > 0.3:
         diagnoses.append("Glomerular / Renal Disease (e.g. Diabetic Nephropathy) - Suggested by clinically significant proteinuria (albuminuria).")
         
     # 5. Dehydration
