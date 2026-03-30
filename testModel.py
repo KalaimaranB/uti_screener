@@ -41,6 +41,6 @@ def process_test_strip_simple(image_path, model_path):
 # --- EXECUTE ---
 # REMEMBER: Update these paths to point to your specific files!
 my_model = "runs/detect/train2/weights/best.pt" 
-my_image = "urine_dataset/test/test2.jpeg"
+my_image = "tests/samples/UTI Sample3.png"
 
 process_test_strip_simple(my_image, my_model)
