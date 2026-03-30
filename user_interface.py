@@ -197,7 +197,8 @@ if start_button:
 
 screening_result = "Not generated yet"
 if st.session_state.upload_history:
-    screening_result = st.session_state.upload_history[-1]["Result"]
+    # Use "Status" key to correctly fetch the history item since we renamed it from "Result"
+    screening_result = st.session_state.upload_history[-1].get("Status", "Not generated yet")
 
 if st.session_state.analysis_started:
     st.divider()

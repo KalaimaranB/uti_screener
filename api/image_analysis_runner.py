@@ -60,6 +60,12 @@ class ImageAnalysisRunner:
                 x1, y1, x2, y2 = map(int, box.xyxy[0])
                 cropped_strip = image[y1:y2, x1:x2]
                 
+                # Auto-rotate horizontal strips to vertical (sync with testModel.py changes)
+                x_length = x2 - x1 
+                y_length = y2 - y1
+                if x_length > y_length: 
+                    cropped_strip = cv2.rotate(cropped_strip, cv2.ROTATE_90_COUNTERCLOCKWISE)
+                
                 # Standardize the size according to testModel.py specification
                 standardized_strip = cv2.resize(cropped_strip, (100, 800))
                 
