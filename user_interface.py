@@ -5,9 +5,9 @@ import tempfile
 import pandas as pd
 import streamlit.components.v1 as components
 
-#Image analysis file
-# from image_analysis_runner import analyze_uploaded_image
-
+#Image analysis module
+import os
+from api.image_analysis_runner import analyze_uploaded_image
 #Page set up info:
 st.set_page_config(
     page_title="UTI Screening",
@@ -166,35 +166,32 @@ if start_button:
             else:
                 upload_status = "Running analysis"
 
-                # Image analysis temporarily disabled while troubleshooting page loading.
-                # #Image analysis skeleton:
-                # with tempfile.NamedTemporaryFile(delete=False, suffix=file_suffix) as temp_file:
-                #     temp_file.write(uploaded_file.getbuffer())
-                #     temp_file_path = temp_file.name
+                with tempfile.NamedTemporaryFile(delete=False, suffix=file_suffix) as temp_file:
+                    temp_file.write(uploaded_file.getbuffer())
+                    temp_file_path = temp_file.name
 
-                # analysis_result = analyze_uploaded_image(temp_file_path)
-                # st.session_state.analysis_output = analysis_result
+                with st.status("Initializing Analysis Pipeline...", expanded=True) as status_box:
+                    def update_status(msg):
+                        status_box.update(label=msg)
+                    
+                    analysis_result = analyze_uploaded_image(temp_file_path, progress_callback=update_status)
+                    st.session_state.analysis_output = analysis_result
+                    upload_status = analysis_result.get("status", "Analysis complete")
+                    
+                    status_box.update(label="Sequence Completed Successfully!", state="complete", expanded=False)
 
-                # upload_status = analysis_result.get("status", "Analysis complete")
-                upload_status = "Analysis step temporarily disabled"
+                # Clean up the initial temp file
+                if os.path.exists(temp_file_path):
+                    os.remove(temp_file_path)
 
         screening_result = upload_status
 
         history_row = {
-            "Timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "Timestamp": datetime.now().strftime("%Y-%m-%d %H:%M"),
             "Name": patient_name or "Not provided",
-            "Sample Date": sample_date.strftime("%Y-%m-%d") if sample_date else "Not provided",
-            "Collection Time": str(collection_time),
-            "Age": patient_age,
-            "Sex": sex,
-            "Filename": uploaded_filename,
-            "Result": screening_result,
-            "Analysis Summary": (
-                st.session_state.analysis_output.get("summary", "Not available")
-                if st.session_state.analysis_output
-                else "Not available"
-            ),
-            "Notes": notes or "None",
+            "Age/Sex": f"{patient_age} {sex[0] if sex else ''}",
+            "Filename": Path(uploaded_filename).name,
+            "Status": screening_result
         }
         st.session_state.upload_history.append(history_row)
 
@@ -204,53 +201,49 @@ if st.session_state.upload_history:
 
 if st.session_state.analysis_started:
     st.divider()
-    st.subheader("Generated Report")
+    st.divider()
+    st.subheader("Generated Patient Report")
 
-    st.write(f"**Name:** {patient_name or 'Not provided'}")
-    st.write(f"**Sample Date:** {sample_date.strftime('%Y-%m-%d') if sample_date else 'Not provided'}")
-    st.write(f"**Age:** {patient_age}")
-    st.write(f"**Sex:** {sex}")
-    st.write(f"**Collection Time:** {collection_time}")
-    st.write(f"**Clinical Notes:** {notes or 'None'}")
+    col1, col2, col3 = st.columns(3)
+    col1.metric("Patient", patient_name or 'Not provided')
+    col2.metric("Age & Sex", f"{patient_age} / {sex}")
+    col3.metric("Sample Date", sample_date.strftime('%Y-%m-%d') if sample_date else 'Not provided')
 
-    st.write("### Preliminary interpretation")
-    st.write(
-        f"The uploaded file status is **{screening_result}**. "
-        "This is only a screening-style interface and not a medical diagnosis."
+    st.caption(f"**Collection Time:** {collection_time} | **Notes:** {notes or 'None'}")
+
+    st.info(
+        f"**Pipeline Status**: {screening_result} \n\n"
+        "*Disclaimer: This is a preliminary screening interface and is not a substitute for a clinical medical diagnosis.*"
     )
 
     if st.session_state.analysis_output:
-        st.write("### Image analysis output")
-        st.write(f"**Analysis status:** {st.session_state.analysis_output.get('status', 'Not available')}")
-        st.write(f"**Summary:** {st.session_state.analysis_output.get('summary', 'Not available')}")
-        st.write(f"**Detected class:** {st.session_state.analysis_output.get('detected_class', 'Not available')}")
-        st.write(f"**Confidence:** {st.session_state.analysis_output.get('confidence', 'Not available')}")
+        st.write("---")
+        st.subheader("Diagnostic Feedback")
+        
+        conf_col, class_col = st.columns(2)
+        conf_col.metric("Aggregate Confidence", st.session_state.analysis_output.get('confidence', 'N/A'))
+        class_col.metric("Recognized Target", st.session_state.analysis_output.get('detected_class', 'N/A').title())
+        
+        with st.expander("🔬 View Detailed Clinical Interpretation", expanded=True):
+            summary_text = st.session_state.analysis_output.get('summary', 'Not available')
+            for line in summary_text.split('\\n'):
+                if line.strip():
+                    st.write(f"- {line.strip()}")
+        
+        debug_img_path = st.session_state.analysis_output.get('debug_image_path')
+        if debug_img_path and os.path.exists(debug_img_path):
+            st.image(debug_img_path, caption="Automated Vision Annotation Result", use_container_width=True)
 
-
+    st.write("---")
+    st.subheader("Session History")
     history_df = pd.DataFrame(st.session_state.upload_history)
-
-    st.write("### Upload history")
-    st.table(history_df)
+    
+    st.dataframe(history_df, use_container_width=True, hide_index=True)
 
     csv_data = history_df.to_csv(index=False).encode("utf-8")
     st.download_button(
-        label="Download upload history as CSV",
+        label="Download simplified history CSV",
         data=csv_data,
-        file_name="uti_upload_history.csv",
+        file_name="uti_screening_history.csv",
         mime="text/csv",
-    )
-
-    st.write("### Print-friendly report")
-    printable_html = history_df.to_html(index=False)
-    components.html(
-        f"""
-        <div style='font-family: Arial, sans-serif; padding: 8px;'>
-            <h3>UTI Upload History Report</h3>
-            <p>This report is formatted for printing and sharing with a doctor.</p>
-            {printable_html}
-            <button onclick='window.print()' style='margin-top: 12px; padding: 8px 12px; cursor: pointer;'>Print Report</button>
-        </div>
-        """,
-        height=600,
-        scrolling=True,
     )

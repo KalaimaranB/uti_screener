@@ -30,6 +30,11 @@ def process_test_strip_simple(image_path, model_path):
             # 4. CROP THE IMAGE TO THOSE CORNERS
             # OpenCV arrays are sliced as [y_start:y_end, x_start:x_end]
             cropped_strip = image[y1:y2, x1:x2]
+            x_length  = x2 - x1 
+            y_length = y2 - y1
+
+            if x_length > y_length: 
+                cropped_strip = cv2.rotate(cropped_strip,cv2.ROTATE_90_COUNTERCLOCKWISE)
             
             # 5. STANDARDIZE THE SIZE 
             

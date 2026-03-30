@@ -17,6 +17,18 @@ pip install -r requirements.txt
 
 ---
 
+## At-Home User Interface (Streamlit)
+
+A user-friendly web interface is available for easy at-home test strip scanning and clinical diagnosis.
+
+```bash
+# Launch the user interface
+streamlit run user_interface.py
+```
+This interface handles image cropping automatically via trained YOLO models, runs the color calibration, and displays an annotated and print-friendly patient report!
+
+---
+
 ## Program 1 — Calibrate (run once)
 
 Builds a colour→concentration model from your chart measurements.
