@@ -23,6 +23,64 @@ st.set_page_config(
     layout="wide",
 )
 
+st.markdown("""
+    <style>
+    #custom-loader {
+        position: fixed;
+        top: 0; left: 0;
+        width: 100vw; height: 100vh;
+        background: #0e1117;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+        animation: fadeOut 0.5s ease 2s forwards;
+    }
+    #custom-loader h2 {
+        color: white;
+        font-family: sans-serif;
+        margin-top: 16px;
+        letter-spacing: 0.05em;
+    }
+    #custom-loader p {
+        color: #888;
+        font-family: sans-serif;
+        font-size: 0.85em;
+        margin-top: 6px;
+    }
+    .loader-bar {
+        width: 220px;
+        height: 4px;
+        background: #1e1e1e;
+        border-radius: 4px;
+        overflow: hidden;
+        margin-top: 16px;
+    }
+    .loader-bar-fill {
+        height: 100%;
+        width: 0%;
+        background: #ff4b4b;
+        border-radius: 4px;
+        animation: fillBar 1.8s ease forwards;
+    }
+    @keyframes fillBar {
+        to { width: 100%; }
+    }
+    @keyframes fadeOut {
+        to { opacity: 0; pointer-events: none; }
+    }
+    </style>
+
+    <div id="custom-loader">
+        <h2>UTI Analyzer</h2>
+        <p>Initializing screening interface...</p>
+        <div class="loader-bar">
+            <div class="loader-bar-fill"></div>
+        </div>
+    </div>
+""", unsafe_allow_html=True)
+
 # Set session state:
 if "analysis_started" not in st.session_state:
     st.session_state.analysis_started = False
@@ -175,15 +233,24 @@ if start_button:
                     temp_file.write(uploaded_file.getbuffer())
                     temp_file_path = temp_file.name
 
-                with st.status("Initializing Analysis Pipeline...", expanded=True) as status_box:
-                    def update_status(msg):
-                        status_box.update(label=msg)
-                    
-                    analysis_result = analyze_uploaded_image(temp_file_path, progress_callback=update_status)
-                    st.session_state.analysis_output = analysis_result
-                    upload_status = analysis_result.get("status", "Analysis complete")
-                    
-                    status_box.update(label="Sequence Completed Successfully!", state="complete", expanded=False)
+                progress_bar = st.progress(0, text="Initializing Analysis Pipeline...")
+                status_text = st.empty()
+
+                step_messages = []
+
+                def update_status(msg):
+                    step_messages.append(msg)
+                    # Estimate progress based on how many updates have come in (cap at 95%)
+                    estimated_progress = min(0.95, len(step_messages) * 0.2)
+                    progress_bar.progress(estimated_progress, text=msg)
+                    status_text.caption(f"Step {len(step_messages)}: {msg}")
+
+                analysis_result = analyze_uploaded_image(temp_file_path, progress_callback=update_status)
+                st.session_state.analysis_output = analysis_result
+                upload_status = analysis_result.get("status", "Analysis complete")
+
+                progress_bar.progress(1.0, text="Sequence Completed Successfully!")
+                status_text.empty()
 
                 # Clean up the initial temp file
                 if os.path.exists(temp_file_path):
