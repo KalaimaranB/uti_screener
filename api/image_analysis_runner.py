@@ -109,13 +109,47 @@ class ImageAnalysisRunner:
         
         try:
             # We enforce pre_cropped=True because we just did YOLO cropping and standardized it specifically.
-            results = self.analyzer.analyze_with_debug(
+            results_normal = self.analyzer.analyze_with_debug(
                 image_path=cropped_path,
                 model=self.calib_model,
                 strip_config_path=self.config_path,
                 debug_output_path=debug_path,
                 pre_cropped=True
             )
+            conf_norm = sum(b.confidence for b in results_normal.values()) / len(results_normal) if results_normal else 0.0
+            
+            # 2B. 180-Degree Inversion Check (Upside Down Strips)
+            img_bgr = cv2.imread(cropped_path)
+            img_flipped = cv2.rotate(img_bgr, cv2.ROTATE_180)
+            
+            flip_fd, flip_path = tempfile.mkstemp(suffix=".jpg")
+            os.close(flip_fd)
+            cv2.imwrite(flip_path, img_flipped)
+            
+            flip_dbg_fd, flip_dbg_path = tempfile.mkstemp(suffix="_debug.png")
+            os.close(flip_dbg_fd)
+            
+            results_flipped = self.analyzer.analyze_with_debug(
+                image_path=flip_path,
+                model=self.calib_model,
+                strip_config_path=self.config_path,
+                debug_output_path=flip_dbg_path,
+                pre_cropped=True
+            )
+            conf_flip = sum(b.confidence for b in results_flipped.values()) / len(results_flipped) if results_flipped else 0.0
+            
+            # Require the inverted layout to beat the normal layout by a visible margin (5%) to avoid noise swaps
+            if conf_flip > conf_norm + 0.05:
+                results = results_flipped
+                final_debug_path = flip_dbg_path
+                avg_conf = conf_flip
+            else:
+                results = results_normal
+                final_debug_path = debug_path
+                avg_conf = conf_norm
+                
+            try: os.remove(flip_path)
+            except Exception: pass
         except Exception as e:
             if os.path.exists(cropped_path):
                 os.remove(cropped_path)
@@ -137,11 +171,15 @@ class ImageAnalysisRunner:
         if diagnoses:
             summary = " \\n".join(diagnoses) # Joined with new line for readable presentation
             
-        # Compile an aggregate confidence score from all active biomarker regions
-        avg_conf = sum(b.confidence for b in results.values()) / len(results) if results else 0.0
+        # Aggregate confidence is already selected by the optimal orientation matrix
         
         biomarkers = {
-            k: {"value": v.value, "unit": v.unit, "confidence": v.confidence}
+            k: {
+                "value": v.value,
+                "unit": v.unit,
+                "confidence": v.confidence,
+                "color_rgb": v.color_rgb
+            }
             for k, v in results.items()
         }
 
@@ -156,7 +194,7 @@ class ImageAnalysisRunner:
             "confidence": f"{avg_conf:.1%}",
             "diagnoses": diagnoses,
             "biomarkers": biomarkers,
-            "debug_image_path": debug_path
+            "debug_image_path": final_debug_path
         }
 
 # Instantiate a global instance to keep models loaded across Streamlit re-runs

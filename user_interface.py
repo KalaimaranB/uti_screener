@@ -7,7 +7,16 @@ import streamlit.components.v1 as components
 
 #Image analysis module
 import os
+import json
 from api.image_analysis_runner import analyze_uploaded_image
+
+@st.cache_data
+def load_diagnostics_model():
+    with open("models/model.json", "r") as f:
+        return json.load(f)
+
+model_spec = load_diagnostics_model()
+
 #Page set up info:
 st.set_page_config(
     page_title="UTI Screening",
@@ -225,15 +234,96 @@ if st.session_state.analysis_started:
         conf_col.metric("Aggregate Confidence", st.session_state.analysis_output.get('confidence', 'N/A'))
         class_col.metric("Recognized Target", st.session_state.analysis_output.get('detected_class', 'N/A').title())
         
-        with st.expander("🔬 View Detailed Clinical Interpretation", expanded=True):
+        with st.expander("🔬 View Detailed Clinical Interpretation", expanded=False):
             summary_text = st.session_state.analysis_output.get('summary', 'Not available')
             for line in summary_text.split('\\n'):
                 if line.strip():
                     st.write(f"- {line.strip()}")
         
+        biomarkers = st.session_state.analysis_output.get("biomarkers", {})
+        if biomarkers:
+            st.markdown("##### Parameter Readouts")
+            
+            # Create cleanly aligned columns for the table header
+            h_col1, h_col2, h_col3, h_col4, h_col5 = st.columns([1.5, 1, 2, 2, 3])
+            h_col1.markdown("**Analyte**")
+            h_col2.markdown("**Swatch**")
+            h_col3.markdown("**Quantity**")
+            h_col4.markdown("**Confidence**")
+            h_col5.markdown("**Normal Bounds**")
+            st.divider()
+
+            for key, data in biomarkers.items():
+                col_name, col_color, col_val, col_conf, col_graph = st.columns([1.5, 1, 2, 2, 3])
+                
+                with col_name:
+                    st.write(f"{key.capitalize()}")
+                
+                with col_color:
+                    r, g, b = data.get("color_rgb", (200, 200, 200))
+                    # Draw actual sampled color
+                    st.markdown(
+                        f"""<div style="width:24px; height:24px; background-color: rgb({r},{g},{b}); border: 1px solid #ddd; border-radius: 4px;"></div>""",
+                        unsafe_allow_html=True
+                    )
+                
+                with col_val:
+                    st.write(f"{data.get('value')} {data.get('unit')}")
+                    
+                with col_conf:
+                    conf_val = data.get('confidence', 0)
+                    if isinstance(conf_val, float):
+                        st.write(f"{conf_val:.1%}")
+                    else:
+                        st.write(str(conf_val))
+                
+                with col_graph:
+                    # Dynamically get numerical extremes from configuration
+                    b_cfg = model_spec.get(key, {})
+                    if b_cfg.get("type", "") == "numeric":
+                        swatch_vals = [s.get("value") for s in b_cfg.get("swatches", [])]
+                        if swatch_vals:
+                            v_min = min(swatch_vals)
+                            v_max = max(swatch_vals)
+                            current_val = data.get("value")
+                            try:
+                                current_val = float(current_val)
+                                if v_max > v_min:
+                                    prog = (current_val - v_min) / (v_max - v_min)
+                                    prog = max(0.0, min(1.0, prog))
+                                    # HTML Gauge styling with relative parameter scales
+                                    st.markdown(
+                                        f"""
+                                        <div style="display: flex; align-items: center; justify-content: space-between; font-size: 0.8em; color: gray; margin-bottom: 2px;">
+                                            <span>{v_min} {data.get('unit')}</span>
+                                            <span>{v_max} {data.get('unit')}</span>
+                                        </div>
+                                        <div style="width: 100%; background-color: #e0e0e0; border-radius: 4px; height: 8px;">
+                                            <div style="width: {prog*100}%; background-color: #4CAF50; height: 100%; border-radius: 4px;"></div>
+                                        </div>
+                                        """, 
+                                        unsafe_allow_html=True
+                                    )
+                                else:
+                                    st.caption("Categorical Boundary")
+                            except (ValueError, TypeError):
+                                st.caption("Categorical Target")
+                        else:
+                            st.caption("--")
+                    else:
+                        st.caption("Qualitative")
+        
         debug_img_path = st.session_state.analysis_output.get('debug_image_path')
         if debug_img_path and os.path.exists(debug_img_path):
-            st.image(debug_img_path, caption="Automated Vision Annotation Result", use_container_width=True)
+            with st.expander("🖼️ View Raw Annotated Debug Scan", expanded=False):
+                st.image(debug_img_path, caption="Computer Vision Detection Boundaries", use_container_width=True)
+            with open(debug_img_path, "rb") as file:
+                st.download_button(
+                        label="⬇️ Download Annotated Debug Scan",
+                        data=file,
+                        file_name="uti_debug_annotated.png",
+                        mime="image/png"
+                    )
 
     st.write("---")
     st.subheader("Session History")

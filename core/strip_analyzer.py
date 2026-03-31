@@ -107,7 +107,7 @@ class StripAnalyzer:
 
         # Step 2: Segment into boxes
         template_cfg = cfg.get("template_mask", {})
-        box_images = self.segment_boxes(strip_img, len(boxes_order), template_cfg)
+        box_images = self.segment_boxes(strip_img, len(boxes_order), template_cfg, model, boxes_order)
 
         # Step 3: Sample colour + predict concentration
         results: dict[str, BoxResult] = {}
@@ -217,6 +217,8 @@ class StripAnalyzer:
         strip_img: np.ndarray,
         num_boxes: int,
         template_cfg: dict | None = None,
+        model: CalibrationModel | None = None,
+        boxes_order: list[str] | None = None,
     ) -> list[np.ndarray]:
         """
         Divide the strip image into *num_boxes* equal-height horizontal slices.
@@ -225,7 +227,7 @@ class StripAnalyzer:
         produce a more consistent segmentation. Falls back to uniform split.
         """
         h, w = strip_img.shape[:2]
-        refined = self._refine_boundaries(strip_img, num_boxes, template_cfg)
+        refined = self._refine_boundaries(strip_img, num_boxes, template_cfg, model, boxes_order)
 
         boxes: list[np.ndarray] = []
         for y_start, y_end in refined:
@@ -237,6 +239,8 @@ class StripAnalyzer:
         strip_img: np.ndarray,
         num_boxes: int,
         template_cfg: dict | None = None,
+        model: CalibrationModel | None = None,
+        boxes_order: list[str] | None = None,
     ) -> list[tuple[int, int]]:
         """
         Fit a regular [pad, gap] × N mask to the row-wise colour signal.
@@ -261,20 +265,67 @@ class StripAnalyzer:
 
         h, w = strip_img.shape[:2]
         bgr  = strip_img.astype(float)
-        row_mean = bgr.mean(axis=1)                   # (h, 3)
+        
+        # ── 0. Dark Background Masking ──────────────────────────────
+        # Ignore black background pixels (e.g. brightness < 30) across each row, 
+        # so tilted strips don't get diluted by black canvas edges.
+        pixel_brightness = bgr.mean(axis=2) # (h, w)
+        non_black_mask = pixel_brightness > 30 # (h, w)
+        
+        row_sum = (bgr * non_black_mask[:, :, None]).sum(axis=1) # (h, 3)
+        row_count = non_black_mask.sum(axis=1)[:, None] # (h, 1)
+        
+        row_mean = np.zeros((h, 3))
+        valid_rows = row_count[:, 0] > 0
+        row_mean[valid_rows] = row_sum[valid_rows] / row_count[valid_rows]
 
-        # ── 1. Per-row gradient signal (edge detection) ─────────────────
-        raw_grad = np.sqrt((np.diff(row_mean, axis=0) ** 2).sum(axis=1))
-        raw_grad = np.concatenate([raw_grad, [0.0]])
-        # smooth slightly to widen peaks
-        grad = savgol_filter(raw_grad, window_length=max(3, h // 80) | 1, polyorder=2)
-        grad = np.clip(grad, 0, None)
+        # ── NEW: Plastic Baseline Color ─────────────────────────────
+        # Identify the most common background color (the physical white plastic backing)
+        valid_pixels = bgr[non_black_mask]
+        if len(valid_pixels) > 0:
+            strip_bgr = np.median(valid_pixels, axis=0) # (3,)
+        else:
+            strip_bgr = np.array([240.0, 240.0, 240.0]) # fallback to dirty white
+            
+        # Keep invalid rows physically black so they trigger the "Fell-Off-Strip" penalty!
+        row_mean[~valid_rows] = np.zeros(3)
+
+        # ── 0. Dark Background Rejection Heuristics ─────────────────────
+        # Identify the first non-black row of the strip body (e.g. threshold > 40 on average RGB)
+        row_brightness = row_mean.mean(axis=1)
+        bright_rows = np.where(row_brightness > 40)[0]
+        first_bright_y = bright_rows[0] if len(bright_rows) > 0 else 0
 
         # ── 2. Cumulative sum of BGR for fast colour-diversity queries ──
         # cs_bgr[y] is the sum of all rows before y. Shape: (h+1, 3)
         cs_bgr = np.concatenate([np.zeros((1, 3)), np.cumsum(row_mean, axis=0)])
 
-        # ── 3. Check for manual overrides ───────────────────────────────────
+        # ── 2a. Signal Divergence Math (Distance from Baseline Plastic) ──
+        # Calculate how much each row physically diverges from the mathematical plain plastic.
+        # This acts as our ultimate geometric boundary engine.
+        row_signal = np.linalg.norm(row_mean - strip_bgr, axis=1) # (h,)
+        
+        # Absolute void spaces should NOT trigger high divergence (as if they were colorful pads).
+        row_signal[~valid_rows] = 0.0
+        
+        # Cumulative signal allows O(1) integral sweeps across any bounding variation
+        cs_signal = np.concatenate([[0], np.cumsum(row_signal)])
+
+        # ── 3. Chemical Swatch Baseline Expectations ──────────────────────
+        expected_colors_np = None
+        if model is not None and boxes_order is not None and len(boxes_order) == num_boxes:
+            expected_colors_list = []
+            for analyte in boxes_order:
+                analyte_cal = model._analytes.get(analyte)
+                if analyte_cal and analyte_cal.swatches:
+                    # model.json holds RGB, cv2 works in BGR natively
+                    bgrs = [[s.rgb[2], s.rgb[1], s.rgb[0]] for s in analyte_cal.swatches]
+                else:
+                    bgrs = [[200, 200, 200]]  # generic fallback
+                expected_colors_list.append(np.array(bgrs, dtype=float))
+            expected_colors_np = expected_colors_list # length 10 array list
+
+        # ── 4. Check for manual overrides ───────────────────────────────────
         if template_cfg is not None:
             m_pad = template_cfg.get("manual_pad_h")
             m_gap = template_cfg.get("manual_gap_h")
@@ -295,11 +346,11 @@ class StripAnalyzer:
         # Pad height: typically takes up about 60-80% of the period.
         # So period = h / num_boxes roughly.
         avg_period = h // num_boxes
-        pad_min    = int(avg_period * 0.4)
-        pad_max    = int(avg_period * 0.9)
+        pad_min    = int(avg_period * 0.15)
+        pad_max    = int(avg_period * 0.90)
         
         gap_min    = int(avg_period * 0.05)
-        gap_max    = int(avg_period * 0.5)
+        gap_max    = int(avg_period * 0.85)
 
         best_score  = -np.inf
         best_params = (pad_min, gap_min, 0)
@@ -320,36 +371,80 @@ class StripAnalyzer:
                 offsets  = np.arange(0, max_off + 1)           # (n_off,)
                 score    = np.zeros(len(offsets), dtype=float)
 
-                for i in range(num_boxes):
-                    pad_starts = offsets + i * period
-                    pad_ends   = pad_starts + pad_h
-                    
-                    # Reward strong edges at pad boundaries
-                    valid_starts = np.clip(pad_starts, 0, h - 1)
-                    valid_ends   = np.clip(pad_ends, 0, h - 1)
-                    # Because some pads match the background, raw pixel-delta can skew the 
-                    # alignment toward bright pads. Edge gradients are the true physical anchor.
-                    score += grad[valid_starts] + grad[valid_ends]
-
-                score /= num_boxes
-
-                # ── 5. Vectorised Inter-Pad Colour Diversity ──
-                # If the template incorrectly selects the physical gaps instead of the pads,
-                # all 10 "pads" will have the exact same plastic strip background colour.
-                # If it correctly selects the physical pads, the 10 pads will have high colour variance.
-                
                 # pre-calculate dimensions
-                all_starts = offsets[None, :] + np.arange(num_boxes)[:, None] * period
+                all_starts = offsets[None, :] + np.arange(num_boxes)[:, None] * period # (10, n_off)
                 all_ends = np.minimum(all_starts + pad_h, h)
 
-                # pad_colors shape: (num_boxes, len(offsets), 3)
+                # ── 1. Geometric Signal Resonance (NEW) ──
+                # sum of signal exactly inside the predicted pads
+                pad_signal_sum = cs_signal[all_ends] - cs_signal[all_starts] # (num_boxes, len(offsets))
+                pad_signal_mean = pad_signal_sum.mean(axis=0) / pad_h # (len(offsets),)
+                
+                # sum of signal exactly inside the predicted gaps
+                if gap_h > 0:
+                    gap_starts = all_ends[:-1] # First 9 boxes gap starts (num_boxes-1, len(offsets))
+                    gap_ends = np.minimum(gap_starts + gap_h, h)
+                    
+                    gap_signal_sum = cs_signal[gap_ends] - cs_signal[gap_starts]
+                    # By maintaining a strict minimum length, we guarantee we aren't dividing by zero
+                    gap_lens = np.maximum(gap_ends - gap_starts, 1) 
+                    gap_signal_mean = (gap_signal_sum / gap_lens).mean(axis=0)
+                else:
+                    gap_signal_mean = np.zeros_like(pad_signal_mean)
+                
+                # The Physical Wall: Maximize average divergence inside pads (Colorful), 
+                # strictly subtract average divergence inside gaps (Masking Plastic).
+                geo_score = (pad_signal_mean - gap_signal_mean * 2.0)
+                score += geo_score * 50.0  # Massive scaling factor overriding tiny ghost edges
+
+                # ── 2. Vectorised Inter-Pad Colour Diversity ──
+                # pad_colors shape: (num_boxes, len(offsets), 3) BGR
                 pad_colors = (cs_bgr[all_ends] - cs_bgr[all_starts]) / pad_h
                 
                 # std over the 10 boxes, then average the 3 RGB channels -> shape: (len(offsets),)
                 diversity = pad_colors.std(axis=0).mean(axis=1)
 
-                # Add diversity bonus to the edge score (weight = 1.5)
-                score += diversity * 1.5
+                # Add diversity bonus to ensure boxes physically hit 10 different colored pads
+                score += diversity * 5.0
+                
+                # ── 6. Bi-Directional Chemical Swatch Alignment ──
+                if expected_colors_np is not None:
+                    penalty_norm = 0.0
+                    penalty_flip = 0.0
+                    n_analyte = len(expected_colors_np)
+                    for i in range(n_analyte):
+                        # Norm direction (pad i -> expected i)
+                        diff_norm = pad_colors[i][:, None, :] - expected_colors_np[i][None, :, :]
+                        penalty_norm += np.linalg.norm(diff_norm, axis=2).min(axis=1)
+                        
+                        # Flipped inverse direction (pad i -> expected n-1-i)
+                        flip_idx = n_analyte - 1 - i
+                        diff_flip = pad_colors[i][:, None, :] - expected_colors_np[flip_idx][None, :, :]
+                        penalty_flip += np.linalg.norm(diff_flip, axis=2).min(axis=1)
+                    
+                    # Accept whichever configuration returns the lowest mapping penalty
+                    chemical_penalty = np.minimum(penalty_norm, penalty_flip) / num_boxes
+                    # Subtract heavily to intensely penalise iterations aligning inside generic textures
+                    score -= chemical_penalty * 3.0
+
+                # ── 7. Black Background Penalty & White Alignment Reward ──
+                # pad_colors shape: (num_boxes, len(offsets), 3) -> average across rgb -> (num_boxes, len(offsets))
+                pad_brightness = pad_colors.mean(axis=2)
+                
+                # Rows purely in the black background average to exactly 0.0 due to the `> 30` ignore mask.
+                # If ANY pad is exactly 0 (or < 5 to account for floating point), it fell off the strip. Severely penalize!
+                any_dark_pad = (pad_brightness < 5).any(axis=0)
+                score += np.where(any_dark_pad, -10000.0, 0.0)
+                
+                # Further penalize configurations where the first box starts before the defined white strip
+                # giving it a small margin (e.g., 5px) to account for thresholding noise
+                invalid_start = offsets < (first_bright_y - 5)
+                score += np.where(invalid_start, -10000.0, 0.0)
+                
+                # Add a gentle reward for templates that naturally originate near the first bright (white strip) pixel
+                # to anchor the template against drifting into the background.
+                alignment_reward = -0.5 * np.abs(offsets - first_bright_y)
+                score += alignment_reward
 
                 best_i = int(score.argmax())
                 if score[best_i] > best_score:
@@ -392,7 +487,15 @@ class StripAnalyzer:
             core = box_img
 
         pixels = core.reshape(-1, 3)
-        median_bgr = np.median(pixels, axis=0).astype(int)
+        
+        # Ignore black background pixels if the scan slightly overlapped the edge
+        brightness = pixels.mean(axis=1)
+        valid_pixels = pixels[brightness > 30]
+        
+        if len(valid_pixels) == 0:
+            valid_pixels = pixels # fallback to all if entire box is < 30
+            
+        median_bgr = np.median(valid_pixels, axis=0).astype(int)
         # OpenCV uses BGR; convert to RGB
         return (int(median_bgr[2]), int(median_bgr[1]), int(median_bgr[0]))
 
@@ -562,7 +665,7 @@ class StripAnalyzer:
 
         strip_img = img_bgr if is_pre_cropped else self.crop_strip(img_bgr, detection_cfg)
         template_cfg = cfg.get("template_mask", {})
-        boundaries = self._refine_boundaries(strip_img, len(boxes_order), template_cfg)
+        boundaries = self._refine_boundaries(strip_img, len(boxes_order), template_cfg, model, boxes_order)
         box_images = [strip_img[y0:y1, :] for y0, y1 in boundaries]
 
         results: dict = {}
