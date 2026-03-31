@@ -12,7 +12,8 @@ from pathlib import Path
 from typing import Union
 
 from core.calibration import CalibrationModel
-from core.strip_analyzer import StripAnalyzer, BoxResult
+from core.strip_analyzer import StripAnalyzer
+from core.models import BoxResult
 
 
 # ---------------------------------------------------------------------------
