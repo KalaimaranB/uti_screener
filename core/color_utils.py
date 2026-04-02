@@ -38,27 +38,36 @@ def interpolate_concentration(
     use_hue: bool = False,  
 ) -> tuple[Union[float, str], float]:
 
-    """
-    Interpolate the concentration for *color_rgb* given a list of reference
-    colour→concentration mappings.
-
-    Parameters
-    ----------
-    color_rgb:
-        The RGB colour sampled from the strip box.
-    reference_points:
-        List of dicts, each with keys:
-          - "rgb":   RGB tuple (or centroid float tuple)
-          - "value": numeric or categorical concentration value
-
-    Returns
-    -------
-    (value, confidence)
-        value:       interpolated (or nearest-match) concentration
-        confidence:  0.0 – 1.0; 1.0 means exact match, lower is further away
-    """
     if not reference_points:
         raise ValueError("reference_points must not be empty")
+
+    def _sort_key(rp: dict) -> float:
+        val = rp["value"]
+        if isinstance(val, str):
+            return 0.0 if "NEG" in val.upper() else 1.0
+        return float(val)
+
+    sorted_refs = sorted(reference_points, key=_sort_key)
+
+    # =================================================================
+    # NEW: THE CLASSIFICATION GATE (HARD DEADZONE)
+    # =================================================================
+    neg_swatch = sorted_refs[0]
+    
+    # Only apply to numeric analytes (skip categorical like Nitrite)
+    if not isinstance(neg_swatch["value"], str):
+        # Calculate absolute distance in raw RGB space
+        dist_to_neg = color_distance_rgb(color_rgb, neg_swatch["rgb"])
+        
+        # If the color is within 25 RGB units of the negative baseline,
+        # it is just lighting noise. Force it to NEGATIVE immediately.
+        if dist_to_neg < 25.0:
+            val_out = neg_swatch["value"]
+            # Check if the float value is functionally 0
+            if abs(float(val_out)) < 1e-6:
+                return ("NEGATIVE", 0.9900)
+            return (round(float(val_out), 4), 0.9900)
+    # =================================================================
 
     confidence_scale = 100.0
 
@@ -170,9 +179,30 @@ def interpolate_concentration(
     val_a = sorted_refs[best_segment_idx]["value"]
     val_b = sorted_refs[best_segment_idx + 1]["value"]
 
-    # --- Categorical: Return closest label along segment ---
+    # --- Categorical: Return closest label ---
     if isinstance(val_a, str):
-        best_value = val_a if best_fraction < 0.5 else val_b
+        
+        # DEAD SIMPLE NITRITE: Pink = Positive.
+        # Pink means Red is significantly higher than Green. 
+        if "NEG" in val_a.upper():
+            neg_r, neg_g, neg_b = sorted_refs[0]["rgb"]
+            query_r, query_g, query_b = color_rgb
+            
+            # How "pink" is the pure negative baseline? (Usually R and G are similar)
+            base_pinkness = int(neg_r) - int(neg_g)
+            
+            # How "pink" is our measured pad?
+            query_pinkness = int(query_r) - int(query_g)
+            
+            # If the pad is just 4 units "more pink" than the baseline, it's Positive.
+            if query_pinkness > (base_pinkness + 4):
+                return (val_b, 0.9900)
+            return (val_a, 0.9900)
+
+        # Fallback for anything else
+        dist_to_neg = color_distance_rgb(query_chroma, P_a)
+        dist_to_pos = color_distance_rgb(query_chroma, P_b)
+        best_value = val_a if dist_to_neg <= dist_to_pos else val_b
         return (best_value, round(confidence, 4))
 
     # --- Numeric: Continuous Interpolation ---

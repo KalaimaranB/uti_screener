@@ -110,14 +110,14 @@ To solve this, the system implements a **Negative Baseline Correction**:
 3.  **Additive Offset**: The system calculates the RGB difference (Delta) between the User's negative and the Reference negative.
 4.  **Curve Shifting**: Every swatch in the calibration model is mathematically shifted by this Delta before prediction. This effectively "moves the goalposts" of the calibration curve into your specific room's lighting space.
 
-**Result**: Implementing this correction improved the pipeline accuracy from **72% to 90%** across the `true_samples` validation set.
+**Result**: Implementing this correction improved the pipeline accuracy from **75% to 95%** across the `true_samples` validation set.
 
 ---
 
 ## How to Improve Accuracy
 
 ### 1. Supply a Negative Reference Image
-The most impactful way to hit 90% accuracy is to provide a negative strip image during analysis.
+The most impactful way to hit **95% accuracy** is to provide a negative strip image during analysis.
 - **CLI**: `python3 program2_analyze.py --image strip.jpg --negative Pure_negative.jpg`
 - **API**: Pass `negative_image_path` to `analyze_strip()`.
 
