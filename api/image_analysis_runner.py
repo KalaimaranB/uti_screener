@@ -78,7 +78,7 @@ class ImageAnalysisRunner:
                 
         return None
 
-    def analyze_uploaded_image(self, image_path: str, progress_callback=None) -> dict:
+    def analyze_uploaded_image(self, image_path: str, negative_image_path: str | None = None, progress_callback=None) -> dict:
         """
         Orchestrates the complete image analysis pipeline.
         Returns a dictionary formatted for presentation in the UI.
@@ -89,6 +89,17 @@ class ImageAnalysisRunner:
         # 1. Detect and Crop Image
         if progress_callback: progress_callback("Running YOLO computer vision to isolate strip...")
         cropped_path = self.crop_strip_with_yolo(image_path)
+        
+        # Also crop the negative reference if provided
+        negative_cropped_path = None
+        if negative_image_path:
+            if progress_callback: progress_callback("Processing negative reference image for calibration...")
+            negative_cropped_path = self.crop_strip_with_yolo(negative_image_path)
+            if negative_cropped_path:
+                print(f"[INFO] Negative reference strip cropped successfully.")
+            else:
+                print(f"[WARNING] Could not detect strip in negative reference image. Using auto white balance fallback.")
+        
         if not cropped_path:
             return {
                 "status": "Failed to detect test strip",
@@ -114,7 +125,8 @@ class ImageAnalysisRunner:
                 model=self.calib_model,
                 strip_config_path=self.config_path,
                 debug_output_path=debug_path,
-                pre_cropped=True
+                pre_cropped=True,
+                negative_image_path=negative_cropped_path,
             )
             conf_norm = sum(b.confidence for b in results_normal.values()) / len(results_normal) if results_normal else 0.0
             
@@ -134,7 +146,8 @@ class ImageAnalysisRunner:
                 model=self.calib_model,
                 strip_config_path=self.config_path,
                 debug_output_path=flip_dbg_path,
-                pre_cropped=True
+                pre_cropped=True,
+                negative_image_path=negative_cropped_path,
             )
             conf_flip = sum(b.confidence for b in results_flipped.values()) / len(results_flipped) if results_flipped else 0.0
             
@@ -150,6 +163,10 @@ class ImageAnalysisRunner:
                 
             try: os.remove(flip_path)
             except Exception: pass
+            # Clean up negative cropped temp file
+            if negative_cropped_path:
+                try: os.remove(negative_cropped_path)
+                except Exception: pass
         except Exception as e:
             if os.path.exists(cropped_path):
                 os.remove(cropped_path)
@@ -173,6 +190,9 @@ class ImageAnalysisRunner:
             
         # Aggregate confidence is already selected by the optimal orientation matrix
         
+        # Determine calibration mode for UI display
+        calibration_mode = "Negative Baseline" if negative_cropped_path else "Auto White Balance"
+        
         biomarkers = {
             k: {
                 "value": v.value,
@@ -194,12 +214,13 @@ class ImageAnalysisRunner:
             "confidence": f"{avg_conf:.1%}",
             "diagnoses": diagnoses,
             "biomarkers": biomarkers,
-            "debug_image_path": final_debug_path
+            "debug_image_path": final_debug_path,
+            "calibration_mode": calibration_mode
         }
 
 # Instantiate a global instance to keep models loaded across Streamlit re-runs
 _runner = ImageAnalysisRunner()
 
-def analyze_uploaded_image(image_path: str, progress_callback=None) -> dict:
+def analyze_uploaded_image(image_path: str, negative_image_path: str | None = None, progress_callback=None) -> dict:
     """Public functional wrapper to analyze an image through the full pipeline."""
-    return _runner.analyze_uploaded_image(image_path, progress_callback=progress_callback)
+    return _runner.analyze_uploaded_image(image_path, negative_image_path=negative_image_path, progress_callback=progress_callback)

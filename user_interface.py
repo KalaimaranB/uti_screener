@@ -175,11 +175,28 @@ with left_col:
     st.subheader("Upload Your Test Image")
     uploaded_file = st.file_uploader(
         "Upload your test strip image from your phone",
-        type=["png", "jpg", "jpeg", "csv"],
-        help="Choose a photo or file from your device."
+        type=["png", "jpg", "jpeg"],
+        help="Choose a photo or file from your device.",
+        key="test_image_uploader",
     )
 
     st.caption("This section is intended for at-home users uploading their own test results.")
+    
+    with st.expander("⚙️ Advanced: Color Calibration", expanded=False):
+        st.markdown(
+            "**Optional:** Upload a photo of an **unused (negative)** test strip taken "
+            "with the same camera and lighting as your test image. This dramatically "
+            "improves color accuracy by calibrating against your specific camera."
+        )
+        negative_file = st.file_uploader(
+            "Upload Negative Reference Strip (Optional)",
+            type=["png", "jpg", "jpeg"],
+            help=(
+                "Take a photo of an unused/negative test strip in the same lighting conditions. "
+                "This allows the system to correct for camera white balance and LED color temperature."
+            ),
+            key="negative_ref_uploader",
+        )
 
     start_button = st.button("Generate Results")
 
@@ -193,6 +210,13 @@ with right_col:
         st.success(f"Uploaded file: {uploaded_file.name}")
     else:
         st.warning("File not uploaded")
+    
+    # Show calibration mode
+    if uploaded_file is not None:
+        if 'negative_file' in dir() and negative_file is not None:
+            st.info("🎯 **Calibration Mode:** Negative Baseline (most accurate)")
+        else:
+            st.info("🔧 **Calibration Mode:** Auto White Balance (fallback)")
 
 if start_button:
     st.session_state.analysis_started = True
@@ -233,6 +257,14 @@ if start_button:
                     temp_file.write(uploaded_file.getbuffer())
                     temp_file_path = temp_file.name
 
+                # Handle negative reference file
+                negative_temp_path = None
+                if negative_file is not None:
+                    neg_suffix = Path(negative_file.name).suffix.lower()
+                    with tempfile.NamedTemporaryFile(delete=False, suffix=neg_suffix) as neg_temp:
+                        neg_temp.write(negative_file.getbuffer())
+                        negative_temp_path = neg_temp.name
+
                 progress_bar = st.progress(0, text="Initializing Analysis Pipeline...")
                 status_text = st.empty()
 
@@ -245,7 +277,11 @@ if start_button:
                     progress_bar.progress(estimated_progress, text=msg)
                     status_text.caption(f"Step {len(step_messages)}: {msg}")
 
-                analysis_result = analyze_uploaded_image(temp_file_path, progress_callback=update_status)
+                analysis_result = analyze_uploaded_image(
+                    temp_file_path, 
+                    negative_image_path=negative_temp_path,
+                    progress_callback=update_status,
+                )
                 st.session_state.analysis_output = analysis_result
                 upload_status = analysis_result.get("status", "Analysis complete")
 
@@ -255,6 +291,8 @@ if start_button:
                 # Clean up the initial temp file
                 if os.path.exists(temp_file_path):
                     os.remove(temp_file_path)
+                if negative_temp_path and os.path.exists(negative_temp_path):
+                    os.remove(negative_temp_path)
 
         screening_result = upload_status
 
@@ -393,6 +431,13 @@ if st.session_state.analysis_started:
             conf_col, class_col = st.columns(2)
             conf_col.metric("Aggregate Confidence", st.session_state.analysis_output.get('confidence', 'N/A'))
             class_col.metric("Recognized Target", st.session_state.analysis_output.get('detected_class', 'N/A').title())
+            
+            # Show calibration mode
+            cal_mode = st.session_state.analysis_output.get('calibration_mode', 'Unknown')
+            if "Baseline" in cal_mode:
+                st.success(f"🎯 Color Calibration: **{cal_mode}** — Colors corrected using negative reference strip.")
+            else:
+                st.info(f"🔧 Color Calibration: **{cal_mode}** — Colors corrected using plastic backing white balance.")
             
             with st.expander("🔬 View Detailed Clinical Interpretation", expanded=True):
                 summary_text = st.session_state.analysis_output.get('summary', 'Not available')

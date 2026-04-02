@@ -7,6 +7,7 @@ def generate_debug_image(
     strip_img: np.ndarray,
     results: Dict[str, BoxResult],
     boundaries: List[Tuple[int, int]],
+    calibration_mode: str = "Uncalibrated",
 ) -> np.ndarray:
     """
     Draw annotated box boundaries, sampled colours, analyte names, values,
@@ -111,6 +112,19 @@ def generate_debug_image(
         font,
         0.55,
         (50, 50, 200),
+        1,
+        cv2.LINE_AA,
+    )
+
+    # Calibration mode indicator
+    mode_color = (40, 160, 40) if "Baseline" in calibration_mode else (80, 80, 200)
+    cv2.putText(
+        canvas,
+        f"Calibration: {calibration_mode}",
+        (w + 10, 36),
+        font,
+        0.4,
+        mode_color,
         1,
         cv2.LINE_AA,
     )

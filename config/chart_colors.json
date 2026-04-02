@@ -255,17 +255,8 @@
         "label": "NEGATIVE",
         "value": 0,
         "rgb": [
-          200,
+          239,
           177,
-          95
-        ]
-      },
-      {
-        "label": "NON-HEMOLYZED",
-        "value": 10,
-        "rgb": [
-          195,
-          172,
           94
         ]
       },
@@ -291,7 +282,7 @@
         "label": "MODERATE",
         "value": 80,
         "rgb": [
-          125,
+          124,
           155,
           125
         ]

@@ -4,112 +4,572 @@
     "unit": "cells/uL",
     "type": "numeric",
     "swatches": [
-      {"label": "NEGATIVE", "value": 0,   "roi": [480, 42,  65, 52]},
-      {"label": "TRACE",    "value": 15,  "roi": [575, 42,  65, 52]},
-      {"label": "SMALL",    "value": 75,  "roi": [670, 42,  65, 52]},
-      {"label": "MODERATE", "value": 125, "roi": [765, 42,  65, 52]},
-      {"label": "LARGE",    "value": 500, "roi": [860, 42,  65, 52]}
+      {
+        "label": "NEGATIVE",
+        "value": 0,
+        "roi": [
+          480,
+          42,
+          65,
+          52
+        ]
+      },
+      {
+        "label": "TRACE",
+        "value": 15,
+        "roi": [
+          575,
+          42,
+          65,
+          52
+        ]
+      },
+      {
+        "label": "SMALL",
+        "value": 75,
+        "roi": [
+          670,
+          42,
+          65,
+          52
+        ]
+      },
+      {
+        "label": "MODERATE",
+        "value": 125,
+        "roi": [
+          765,
+          42,
+          65,
+          52
+        ]
+      },
+      {
+        "label": "LARGE",
+        "value": 500,
+        "roi": [
+          860,
+          42,
+          65,
+          52
+        ]
+      }
     ]
   },
   "nitrite": {
     "unit": "categorical",
     "type": "categorical",
     "swatches": [
-      {"label": "NEGATIVE", "value": "NEGATIVE", "roi": [480, 120, 65, 52]},
-      {"label": "POSITIVE", "value": "POSITIVE", "roi": [670, 120, 65, 52]}
+      {
+        "label": "NEGATIVE",
+        "value": "NEGATIVE",
+        "roi": [
+          480,
+          120,
+          65,
+          52
+        ]
+      },
+      {
+        "label": "POSITIVE",
+        "value": "POSITIVE",
+        "roi": [
+          670,
+          120,
+          65,
+          52
+        ]
+      }
     ]
   },
   "urobilinogen": {
     "unit": "umol/L",
     "type": "numeric",
     "swatches": [
-      {"label": "NORMAL",   "value": 3.2,  "roi": [430, 198, 65, 52]},
-      {"label": "NORMAL_2", "value": 16,   "roi": [530, 198, 65, 52]},
-      {"label": "+",        "value": 32,   "roi": [670, 198, 65, 52]},
-      {"label": "++",       "value": 64,   "roi": [765, 198, 65, 52]},
-      {"label": "+++",      "value": 128,  "roi": [860, 198, 65, 52]}
+      {
+        "label": "NORMAL",
+        "value": 3.2,
+        "roi": [
+          430,
+          198,
+          65,
+          52
+        ]
+      },
+      {
+        "label": "NORMAL_2",
+        "value": 16,
+        "roi": [
+          530,
+          198,
+          65,
+          52
+        ]
+      },
+      {
+        "label": "+",
+        "value": 32,
+        "roi": [
+          670,
+          198,
+          65,
+          52
+        ]
+      },
+      {
+        "label": "++",
+        "value": 64,
+        "roi": [
+          765,
+          198,
+          65,
+          52
+        ]
+      },
+      {
+        "label": "+++",
+        "value": 128,
+        "roi": [
+          860,
+          198,
+          65,
+          52
+        ]
+      }
     ]
   },
   "protein": {
     "unit": "g/L",
     "type": "numeric",
     "swatches": [
-      {"label": "NEGATIVE",  "value": 0,    "roi": [480, 278, 65, 52]},
-      {"label": "TRACE",     "value": 0.3,  "roi": [530, 278, 65, 52]},
-      {"label": "+",         "value": 1.0,  "roi": [670, 278, 65, 52]},
-      {"label": "++",        "value": 3.0,  "roi": [765, 278, 65, 52]},
-      {"label": "+++",       "value": 20,   "roi": [860, 278, 65, 52]}
+      {
+        "label": "NEGATIVE",
+        "value": 0,
+        "roi": [
+          480,
+          278,
+          65,
+          52
+        ]
+      },
+      {
+        "label": "TRACE",
+        "value": 0.3,
+        "roi": [
+          530,
+          278,
+          65,
+          52
+        ]
+      },
+      {
+        "label": "+",
+        "value": 1.0,
+        "roi": [
+          670,
+          278,
+          65,
+          52
+        ]
+      },
+      {
+        "label": "++",
+        "value": 3.0,
+        "roi": [
+          765,
+          278,
+          65,
+          52
+        ]
+      },
+      {
+        "label": "+++",
+        "value": 20,
+        "roi": [
+          860,
+          278,
+          65,
+          52
+        ]
+      }
     ]
   },
   "pH": {
     "unit": "pH",
     "type": "numeric",
     "swatches": [
-      {"label": "5.0", "value": 5.0, "roi": [430, 358, 65, 52]},
-      {"label": "6.0", "value": 6.0, "roi": [530, 358, 65, 52]},
-      {"label": "6.5", "value": 6.5, "roi": [625, 358, 65, 52]},
-      {"label": "7.0", "value": 7.0, "roi": [720, 358, 65, 52]},
-      {"label": "7.5", "value": 7.5, "roi": [765, 358, 65, 52]},
-      {"label": "8.0", "value": 8.0, "roi": [815, 358, 65, 52]},
-      {"label": "8.5", "value": 8.5, "roi": [860, 358, 65, 52]}
+      {
+        "label": "5.0",
+        "value": 5.0,
+        "roi": [
+          430,
+          358,
+          65,
+          52
+        ]
+      },
+      {
+        "label": "6.0",
+        "value": 6.0,
+        "roi": [
+          530,
+          358,
+          65,
+          52
+        ]
+      },
+      {
+        "label": "6.5",
+        "value": 6.5,
+        "roi": [
+          625,
+          358,
+          65,
+          52
+        ]
+      },
+      {
+        "label": "7.0",
+        "value": 7.0,
+        "roi": [
+          720,
+          358,
+          65,
+          52
+        ]
+      },
+      {
+        "label": "7.5",
+        "value": 7.5,
+        "roi": [
+          765,
+          358,
+          65,
+          52
+        ]
+      },
+      {
+        "label": "8.0",
+        "value": 8.0,
+        "roi": [
+          815,
+          358,
+          65,
+          52
+        ]
+      },
+      {
+        "label": "8.5",
+        "value": 8.5,
+        "roi": [
+          860,
+          358,
+          65,
+          52
+        ]
+      }
     ]
   },
   "blood": {
     "unit": "cells/uL",
     "type": "numeric",
+    "negative_threshold": 12,
+    "use_hue": true,
     "swatches": [
-      {"label": "NEGATIVE",        "value": 0,   "roi": [480, 438, 65, 52]},
-      {"label": "NON-HEMOLYZED",   "value": 10,  "roi": [530, 438, 65, 52]},
-      {"label": "TRACE",           "value": 10,  "roi": [625, 438, 65, 52]},
-      {"label": "SMALL",           "value": 25,  "roi": [720, 438, 65, 52]},
-      {"label": "MODERATE",        "value": 80,  "roi": [815, 438, 65, 52]},
-      {"label": "LARGE",           "value": 200, "roi": [860, 438, 65, 52]}
+      {
+        "label": "NEGATIVE",
+        "value": 0,
+        "roi": [
+          480,
+          438,
+          65,
+          52
+        ]
+      },
+      {
+        "label": "TRACE",
+        "value": 10,
+        "roi": [
+          625,
+          438,
+          65,
+          52
+        ]
+      },
+      {
+        "label": "SMALL",
+        "value": 25,
+        "roi": [
+          720,
+          438,
+          65,
+          52
+        ]
+      },
+      {
+        "label": "MODERATE",
+        "value": 80,
+        "roi": [
+          815,
+          438,
+          65,
+          52
+        ]
+      },
+      {
+        "label": "LARGE",
+        "value": 200,
+        "roi": [
+          860,
+          438,
+          65,
+          52
+        ]
+      }
     ]
   },
   "sp_gravity": {
     "unit": "SG",
     "type": "numeric",
     "swatches": [
-      {"label": "1.000", "value": 1.000, "roi": [430, 515, 65, 52]},
-      {"label": "1.005", "value": 1.005, "roi": [530, 515, 65, 52]},
-      {"label": "1.010", "value": 1.010, "roi": [625, 515, 65, 52]},
-      {"label": "1.015", "value": 1.015, "roi": [720, 515, 65, 52]},
-      {"label": "1.020", "value": 1.020, "roi": [765, 515, 65, 52]},
-      {"label": "1.025", "value": 1.025, "roi": [815, 515, 65, 52]},
-      {"label": "1.030", "value": 1.030, "roi": [860, 515, 65, 52]}
+      {
+        "label": "1.000",
+        "value": 1.000,
+        "roi": [
+          430,
+          515,
+          65,
+          52
+        ]
+      },
+      {
+        "label": "1.005",
+        "value": 1.005,
+        "roi": [
+          530,
+          515,
+          65,
+          52
+        ]
+      },
+      {
+        "label": "1.010",
+        "value": 1.010,
+        "roi": [
+          625,
+          515,
+          65,
+          52
+        ]
+      },
+      {
+        "label": "1.015",
+        "value": 1.015,
+        "roi": [
+          720,
+          515,
+          65,
+          52
+        ]
+      },
+      {
+        "label": "1.020",
+        "value": 1.020,
+        "roi": [
+          765,
+          515,
+          65,
+          52
+        ]
+      },
+      {
+        "label": "1.025",
+        "value": 1.025,
+        "roi": [
+          815,
+          515,
+          65,
+          52
+        ]
+      },
+      {
+        "label": "1.030",
+        "value": 1.030,
+        "roi": [
+          860,
+          515,
+          65,
+          52
+        ]
+      }
     ]
   },
   "ketone": {
     "unit": "mmol/L",
     "type": "numeric",
     "swatches": [
-      {"label": "NEGATIVE", "value": 0,    "roi": [480, 592, 65, 52]},
-      {"label": "TRACE",    "value": 0.5,  "roi": [575, 592, 65, 52]},
-      {"label": "SMALL",    "value": 1.5,  "roi": [670, 592, 65, 52]},
-      {"label": "MODERATE", "value": 4.0,  "roi": [765, 592, 65, 52]},
-      {"label": "LARGE",    "value": 16.0, "roi": [860, 592, 65, 52]}
+      {
+        "label": "NEGATIVE",
+        "value": 0,
+        "roi": [
+          480,
+          592,
+          65,
+          52
+        ]
+      },
+      {
+        "label": "TRACE",
+        "value": 0.5,
+        "roi": [
+          575,
+          592,
+          65,
+          52
+        ]
+      },
+      {
+        "label": "SMALL",
+        "value": 1.5,
+        "roi": [
+          670,
+          592,
+          65,
+          52
+        ]
+      },
+      {
+        "label": "MODERATE",
+        "value": 4.0,
+        "roi": [
+          765,
+          592,
+          65,
+          52
+        ]
+      },
+      {
+        "label": "LARGE",
+        "value": 16.0,
+        "roi": [
+          860,
+          592,
+          65,
+          52
+        ]
+      }
     ]
   },
   "bilirubin": {
     "unit": "umol/L",
     "type": "numeric",
     "swatches": [
-      {"label": "NEGATIVE", "value": 0,   "roi": [480, 670, 65, 52]},
-      {"label": "SMALL",    "value": 17,  "roi": [625, 670, 65, 52]},
-      {"label": "MODERATE", "value": 50,  "roi": [765, 670, 65, 52]},
-      {"label": "LARGE",    "value": 100, "roi": [860, 670, 65, 52]}
+      {
+        "label": "NEGATIVE",
+        "value": 0,
+        "roi": [
+          480,
+          670,
+          65,
+          52
+        ]
+      },
+      {
+        "label": "SMALL",
+        "value": 17,
+        "roi": [
+          625,
+          670,
+          65,
+          52
+        ]
+      },
+      {
+        "label": "MODERATE",
+        "value": 50,
+        "roi": [
+          765,
+          670,
+          65,
+          52
+        ]
+      },
+      {
+        "label": "LARGE",
+        "value": 100,
+        "roi": [
+          860,
+          670,
+          65,
+          52
+        ]
+      }
     ]
   },
   "glucose": {
     "unit": "mmol/L",
     "type": "numeric",
     "swatches": [
-      {"label": "NEGATIVE", "value": 0,   "roi": [430, 748, 65, 52]},
-      {"label": "TRACE",    "value": 5,   "roi": [530, 748, 65, 52]},
-      {"label": "+",        "value": 15,  "roi": [625, 748, 65, 52]},
-      {"label": "++",       "value": 30,  "roi": [720, 748, 65, 52]},
-      {"label": "+++",      "value": 60,  "roi": [815, 748, 65, 52]},
-      {"label": "++++",     "value": 110, "roi": [860, 748, 65, 52]}
+      {
+        "label": "NEGATIVE",
+        "value": 0,
+        "roi": [
+          430,
+          748,
+          65,
+          52
+        ]
+      },
+      {
+        "label": "TRACE",
+        "value": 5,
+        "roi": [
+          530,
+          748,
+          65,
+          52
+        ]
+      },
+      {
+        "label": "+",
+        "value": 15,
+        "roi": [
+          625,
+          748,
+          65,
+          52
+        ]
+      },
+      {
+        "label": "++",
+        "value": 30,
+        "roi": [
+          720,
+          748,
+          65,
+          52
+        ]
+      },
+      {
+        "label": "+++",
+        "value": 60,
+        "roi": [
+          815,
+          748,
+          65,
+          52
+        ]
+      },
+      {
+        "label": "++++",
+        "value": 110,
+        "roi": [
+          860,
+          748,
+          65,
+          52
+        ]
+      }
     ]
   }
 }

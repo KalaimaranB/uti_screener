@@ -88,6 +88,16 @@ def parse_args() -> argparse.Namespace:
         metavar="PATH",
         help="Path for the debug image (default: <image_stem>_debug.png).",
     )
+    parser.add_argument(
+        "--negative-ref",
+        default=None,
+        metavar="PATH",
+        help=(
+            "Path to a negative (all-baseline) reference strip image. "
+            "Used to calibrate color readings against the user's camera and lighting. "
+            "Dramatically improves accuracy when provided."
+        ),
+    )
     return parser.parse_args()
 
 
@@ -101,6 +111,8 @@ def main() -> None:
     if args.debug:
         debug_out = args.debug_output or str(image_path.parent / f"{image_path.stem}_debug.png")
         print(f"            Debug image:     {debug_out}")
+    if args.negative_ref:
+        print(f"            Negative ref:    {args.negative_ref}")
 
     try:
         model = CalibrationModel.load(args.model)
@@ -115,6 +127,7 @@ def main() -> None:
                 manual_pad_h=args.manual_pad_h,
                 manual_gap_h=args.manual_gap_h,
                 manual_y_offset=args.manual_y_offset,
+                negative_image_path=args.negative_ref,
             )
         else:
             raw_results = analyzer.analyze(
@@ -124,6 +137,7 @@ def main() -> None:
                 manual_pad_h=args.manual_pad_h,
                 manual_gap_h=args.manual_gap_h,
                 manual_y_offset=args.manual_y_offset,
+                negative_image_path=args.negative_ref,
             )
 
     except (FileNotFoundError, ValueError, KeyError) as e:

@@ -61,6 +61,7 @@ def analyze_strip(
     manual_pad_h: int | None = None,
     manual_gap_h: int | None = None,
     manual_y_offset: int | None = None,
+    negative_image_path: str | None = None,
 ) -> dict[str, AnalysisResult]:
     """
     Analyse a urinalysis strip image and return per-analyte concentrations.
@@ -99,6 +100,7 @@ def analyze_strip(
         manual_pad_h=manual_pad_h,
         manual_gap_h=manual_gap_h,
         manual_y_offset=manual_y_offset,
+        negative_image_path=negative_image_path,
     )
 
     return {

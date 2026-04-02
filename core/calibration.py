@@ -15,7 +15,7 @@ from typing import Union
 import cv2
 import numpy as np
 
-from .color_utils import interpolate_concentration, RGB
+from .color_utils import interpolate_concentration, RGB, compute_curve_shift, apply_curve_shift_to_swatches
 
 
 # ---------------------------------------------------------------------------
@@ -37,6 +37,8 @@ class AnalyteCalibration:
     unit: str
     analyte_type: str           # "numeric" | "categorical"
     swatches: list[Swatch] = field(default_factory=list)
+    negative_threshold: float = 0.0
+    use_hue: bool = False 
 
     def predict(self, color_rgb: RGB) -> tuple[Union[float, str], float]:
         """Return (concentration, confidence) for a given RGB colour."""
@@ -65,6 +67,8 @@ class CalibrationModel:
 
     def __init__(self) -> None:
         self._analytes: dict[str, AnalyteCalibration] = {}
+        self._curve_offsets: dict[str, tuple[int, int, int]] = {}
+        self._has_baseline: bool = False
 
     # ------------------------------------------------------------------
     # Construction
@@ -117,6 +121,8 @@ class CalibrationModel:
                 name=analyte_key,
                 unit=analyte_cfg.get("unit", ""),
                 analyte_type=analyte_cfg.get("type", "numeric"),
+                negative_threshold=analyte_cfg.get("negative_threshold", 0.0), 
+                use_hue=analyte_cfg.get("use_hue", False), 
             )
 
             for swatch_cfg in analyte_cfg.get("swatches", []):
@@ -189,6 +195,8 @@ class CalibrationModel:
                 name=analyte_key,
                 unit=analyte_cfg.get("unit", ""),
                 analyte_type=analyte_cfg.get("type", "numeric"),
+                negative_threshold=analyte_cfg.get("negative_threshold", 0.0), 
+                use_hue=analyte_cfg.get("use_hue", False), 
             )
 
             for swatch_cfg in analyte_cfg.get("swatches", []):
@@ -220,6 +228,11 @@ class CalibrationModel:
         """
         Predict concentration for a reagent pad colour.
 
+        If a negative baseline has been set, the calibration curve is shifted
+        into the user's color space (additive offset applied to reference
+        swatches). The raw measured color is matched directly against the
+        shifted curve — no transformation of the input.
+
         Parameters
         ----------
         analyte:
@@ -237,12 +250,70 @@ class CalibrationModel:
                 f"Available: {list(self._analytes.keys())}"
             )
         cal = self._analytes[analyte]
-        value, confidence = cal.predict(color_rgb)
+
+        # Build reference points — shift if baseline was set
+        reference_points = []
+        offset = self._curve_offsets.get(analyte, (0, 0, 0))
+        for s in cal.swatches:
+            if self._has_baseline and any(o != 0 for o in offset):
+                shifted_rgb = (
+                    int(min(255, max(0, s.rgb[0] + offset[0]))),
+                    int(min(255, max(0, s.rgb[1] + offset[1]))),
+                    int(min(255, max(0, s.rgb[2] + offset[2]))),
+                )
+            else:
+                shifted_rgb = s.rgb
+            reference_points.append({
+                "rgb": shifted_rgb,
+                "value": s.value,
+            })
+
+        # Match raw measured color against (shifted) reference points
+        value, confidence = interpolate_concentration(color_rgb, reference_points, 
+                                               negative_threshold=cal.negative_threshold)
         return (value, cal.unit, confidence)
 
     def analyte_names(self) -> list[str]:
         """Return a list of all calibrated analyte keys."""
         return list(self._analytes.keys())
+
+    def get_reference_negatives(self) -> dict[str, RGB]:
+        """
+        Extract the expected negative/baseline RGB for each analyte.
+        Uses the first swatch (lowest concentration) for each analyte.
+        """
+        negatives: dict[str, RGB] = {}
+        for name, cal in self._analytes.items():
+            if cal.swatches:
+                # Sort by value to find the baseline (lowest/most-negative swatch)
+                sorted_sw = sorted(cal.swatches, key=lambda s: float(s.value) if isinstance(s.value, (int, float)) else 0.0)
+                negatives[name] = sorted_sw[0].rgb
+        return negatives
+
+    def set_negative_baseline(self, measured_negatives: dict[str, RGB]) -> None:
+        """
+        Set the per-analyte calibration curve shift by comparing the reference
+        chart negatives with the user's measured negative strip colors.
+
+        Computes additive offsets (measured - reference) and stores them.
+        All subsequent ``get_concentration()`` calls will shift the reference
+        swatches by these offsets, effectively moving the calibration curve
+        into the user's actual color space.
+
+        Parameters
+        ----------
+        measured_negatives:
+            Analyte → RGB as measured from the user's negative strip image.
+        """
+        ref_negatives = self.get_reference_negatives()
+        self._curve_offsets = compute_curve_shift(ref_negatives, measured_negatives)
+        self._has_baseline = True
+        n_calibrated = len([k for k in self._curve_offsets if k in measured_negatives])
+        print(f"[INFO] Negative baseline set for {n_calibrated} analytes.")
+
+    def has_baseline(self) -> bool:
+        """Whether a negative baseline correction has been applied."""
+        return self._has_baseline
 
     # ------------------------------------------------------------------
     # Serialisation
