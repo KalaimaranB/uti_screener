@@ -100,9 +100,9 @@ class StripAnalyzer:
 
         # Step 2b: White balance fallback (if no negative baseline was provided)
         wb_gains = (1.0, 1.0, 1.0)
-        if not model.has_baseline():
-            wb_gains = white_balance_from_plastic(strip_img, boundaries)
-            print(f"[INFO] Auto white balance gains (RGB): ({wb_gains[0]:.3f}, {wb_gains[1]:.3f}, {wb_gains[2]:.3f})")
+
+        wb_gains = white_balance_from_plastic(strip_img, boundaries)
+        print(f"[INFO] Auto white balance gains (RGB): ({wb_gains[0]:.3f}, {wb_gains[1]:.3f}, {wb_gains[2]:.3f})")
 
         # Step 3: Sample + Predict
         results: dict[str, BoxResult] = {}
@@ -167,9 +167,8 @@ class StripAnalyzer:
 
         # White balance fallback (if no negative baseline was provided)
         wb_gains = (1.0, 1.0, 1.0)
-        if not model.has_baseline():
-            wb_gains = white_balance_from_plastic(strip_img, boundaries)
-            print(f"[INFO] Auto white balance gains (RGB): ({wb_gains[0]:.3f}, {wb_gains[1]:.3f}, {wb_gains[2]:.3f})")
+        wb_gains = white_balance_from_plastic(strip_img, boundaries)
+        print(f"[INFO] Auto white balance gains (RGB): ({wb_gains[0]:.3f}, {wb_gains[1]:.3f}, {wb_gains[2]:.3f})")
 
         results: dict[str, BoxResult] = {}
         for analyte, box_img in zip(boxes_order, box_images):

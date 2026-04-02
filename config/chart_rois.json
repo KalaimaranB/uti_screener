@@ -287,16 +287,6 @@
         ]
       },
       {
-        "label": "TRACE",
-        "value": 10,
-        "roi": [
-          625,
-          438,
-          65,
-          52
-        ]
-      },
-      {
         "label": "SMALL",
         "value": 25,
         "roi": [

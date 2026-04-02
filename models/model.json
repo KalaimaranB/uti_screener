@@ -248,6 +248,7 @@
   "blood": {
     "unit": "cells/uL",
     "type": "numeric",
+    "use_hue": true,
     "swatches": [
       {
         "label": "NEGATIVE",
@@ -265,15 +266,6 @@
           195,
           172,
           94
-        ]
-      },
-      {
-        "label": "TRACE",
-        "value": 10,
-        "rgb": [
-          200,
-          163,
-          82
         ]
       },
       {

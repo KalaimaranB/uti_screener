@@ -328,6 +328,8 @@ class CalibrationModel:
             data[name] = {
                 "unit": cal.unit,
                 "type": cal.analyte_type,
+                "use_hue": cal.use_hue,                         
+                "negative_threshold": cal.negative_threshold,
                 "swatches": [
                     {
                         "label": s.label,
@@ -356,6 +358,8 @@ class CalibrationModel:
                 name=name,
                 unit=cfg["unit"],
                 analyte_type=cfg["type"],
+                use_hue=cfg.get("use_hue", False),                       
+                negative_threshold=cfg.get("negative_threshold", 0.0),
             )
             for s in cfg["swatches"]:
                 cal.swatches.append(
