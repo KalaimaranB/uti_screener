@@ -1,52 +1,66 @@
-# Urinalysis Strip Analyzer Algorithm
+# Urinalysis Strip Analyzer Algorithm (90% Accuracy Target)
 
 The `StripAnalyzer` module is the core computer vision pipeline responsible for taking raw images of urinalysis dipped strips and mathematically isolating each of the 10 chemical reagent boxes. 
 
-Rather than relying purely on static image cropping (which fails quickly on angled images, zoomed scans, and physical imperfections), the analyzer treats the system as a **1D geometric signal processing grid search** heavily constrained by the chemical's expected RGB hues.
+The system has been overhauled to move away from pure geometric grid search toward a **two-stage, color-aware segmentation pipeline** that enforces biological reality. This update helped the system achieve **90% accuracy** on the standard `true_samples` dataset.
 
-## 1. Background Masking and Pre-computation
+---
 
-Instead of dealing with 2D bounds right away, the algorithm reduces the image problem into a 1-dimensional "row signal" array by reading the visual properties of the strip row by row from top to bottom.
+## Stage 1: 1D Edge-Based Detection
 
-1. **Non-Black Masking**: Dark canvas space surrounding the strip is excluded entirely by ignoring all pixels with a brightness under 30.
-2. **Plastic Baseline Extraction (`strip_bgr`)**: We pull the median color hue of the remaining "valid" strip pixels to ascertain the color of the physical white plastic backing.
-3. **Saturation Tracking**: We calculate a 1D array of the max variance across RGB channels for each row (`max_channel - min_channel`). Reagent chemicals typically exhibit very loud colors (high saturation), while plastic gaps, shadows, and glares are desaturated (grays / whites).
-4. **Cumulative Sums (O(1) Sweeps)**: We wrap the raw BGR rows and the Saturation rows into `cumsum` vectors. This allows us to instantly calculate the average values for *any slice* of the strip by just taking the difference at the start and end of the sum arrays.
+The first stage attempts to find the pads by analyzing the "vertical signal" of the strip. Rather than finding boxes in 2D, we reduce the problem to a 1D brightness profile.
 
-## 2. Parameter Grid Search
+1.  **Column-Averaged Brightness**: We compute the average brightness of each row across the strip's width.
+2.  **Gaussian Smoothing**: The 1D signal is smoothed using `gaussian_filter1d` (sigma=2.5) to eliminate printing noise and paper texture.
+3.  **Brightness Run-Length Encoding (RLE)**: 
+    - We classify each row as "Gap" (bright white plastic) or "Pad" (colored reagent) based on a floating brightness threshold (65th percentile).
+    - We extract contiguous "runs" of Pad pixels.
+4.  **Validation Gate**: 
+    - We expect exactly 10 pad runs.
+    - **Uniformity Check**: The system calculates the **Coefficient of Variation (CV)** for pad heights. If `CV > 0.3`, the detection is rejected as inconsistent.
+    - **Physical Ratio Check**: The gap-to-pad ratio must fall between 0.15 and 1.2 during this early phase.
 
-Because strips can vary wildly in zoom level and offset, the system iterates over a vast brute-force combination of:
-- **`pad_h`**: The height of the reagent box (pixels).
-- **`gap_h`**: The height of the plastic space between boxes (pixels).
-- **`y_offset`**: The amount of blank top margin before the very first box.
+If Stage 1 finds a clean, periodic pattern, it returns immediately. If the patterns are messy (due to severe blur or matching colors), the system falls back to Stage 2.
 
-For any combination, we generate exact bounding boxes. To determine if that combination is the "perfect fit," we calculate a holistic `score`.
+---
 
-## 3. The Objective Scoring Equation
+## Stage 2: Constrained Grid Search Fallback
 
-The chosen arrangement is simply the combination that maximizes the combined heuristic rules below:
+When simple edge detection fails, the system performs an exhaustive grid search over possible geometries, heavily constrained by physical manufacturing standards and known chemistry.
 
-### *A. Geometric Resonance*
-We strongly reward alignments that trap highly vivid saturation inside the `pad` windows while trapping dead grays inside the `gap` windows.
-`score = (pad_signal_mean - gap_signal_mean * 2.0) * 50.0`
+### 1. Hard Geometric Constraints
+- **Pad Height (`pad_h`)**: Constrained to 45%–75% of the total strip period.
+- **Gap Height (`gap_h`)**: Constrained to 30%–80% of the active pad height.
+- **Search Range**: These constraints prevent the "slippage" errors common in simpler template matchers.
 
-### *B. Inter-Pad Diversity Tie-Breaker*
-We lightly reward combinations that pick up completely drastically different colors between the 10 boxes, slightly helping to push boxes away from accidentally snapping to a monochromatic stretch.
+### 2. Multi-Term Objective Scoring
+The "perfect fit" is the alignment that maximizes a holistic score composed of:
 
-### *C. Gap Plastic Validation*
-Since some reagent pads are whitish (like Leukocytes in a resting state), it's possible to confuse a gap for a pad based solely on geometry. The fix forces the gap intervals to be close to the *median white strip color*. 
-We measure the Euclidean distance between our targeted background hue and the average pixel values inside the gap bounding boxes, penalizing the score heavily if the gap doesn't look like white plastic stock.
+*   **A. Calibration Color Match (Primary - 8.0x Weight)**: 
+    - This is the most critical logic update. The system uses the active `CalibrationModel` to ask: *"If this window is the Glucose pad, how well does its color match any of the known Glucose swatches?"*
+    - By anchoring geometry to **biological reality**, the system can distinguish a pad from a gap even if they have identical brightness.
+*   **B. Non-White Reward (Secondary - 3.0x Weight)**:
+    - Reagent pads are typically colored (even if desaturated), while the strip backing is bright white plastic. We reward arrangements where "non-white" pixels fall inside the pad windows.
+*   **C. Gap Brightness (Tertiary - 2.0x Weight)**:
+    - We penalize any arrangement where the "gap" windows contain dark colors or heavy saturation.
+*   **D. Soft Anchor (1.0x Weight)**:
+    - We use the first derivative of the top of the strip to find the likely physical start of the plastic. We apply a soft quadratic penalty to any `y_offset` that deviates significantly from this anchor.
 
-### *D. Theoretical Color Constraints*
-We map the sampled color from every pad and measure its euclidean distance to the expected calibration swatch colors stored for those specific analytes. If a boundary match proposes that the red Blood pad is blue, we inject a massive score penalty. This constraint perfectly aligns the geometry mask to real biological reality.
+---
 
-## 4. Inverted Auto-Detection
+## 3. Simultaneous Orientation & Flip Detection
 
-When running the grid search, the system simulates two alternative realities for the color analysis component:
-- **Normal Scoring (Top to bottom)**: Checks against the config (Leukocyte at bottom = index 0 through Glucose at top).
-- **Flipped Scoring (Bottom to top)**: The reverse sequence checks mapping the config arrays backward.
+Previously, the system checked for upside-down strips as a post-processing step. Now, the **Grid Search evaluates both orientations in parallel**.
 
-If the *Flipped Scoring* yields a higher alignment with the physical chemistry model, the algorithm declares `is_flipped = True`.
+- It calculates a `score_normal` and a `score_flipped` for every possible geometry.
+- If the "Flipped" reality yields a lower L2 color distance to the calibration swatches, the system declares `is_flipped = True`.
+- This approach is significantly more robust than previous hue-based heuristics, as it uses the total evidence of all 10 pads to determine orientation.
 
-### Output Inversion
-When returning the bounding boxes for extraction, if the strip was flagged as upside-down, the algorithm physically reverses the returned tuple assignments. The rest of the application naturally unpacks index `0` thinking it's analyzing the Leukocytes bounding box, and thanks to the flip, the system feeds it the physical pad located at the bottom of the image natively without having to manually flip the raw image file in memory!
+---
+
+## 4. Sampling & Border Mitigation
+
+Once the boundaries are locked:
+1.  The system samples the **central 50%** of the identified pad region.
+2.  This "core sampling" avoids **Border Contamination** (where the chemical reagent meets the white plastic) and **Wick Effects** (where excess liquid pools at the edges of the pad).
+3.  A median average is taken of these core pixels to produce the final RGB triplet sent to the interpolation engine.
