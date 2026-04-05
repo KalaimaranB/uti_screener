@@ -31,6 +31,16 @@ This interface handles image cropping automatically via trained YOLO models, run
 
 ---
 
+## 🔬 Scientific Foundation
+
+Our detection pipeline utilizes three primary biomarkers to improve accuracy and provide deeper insights:
+
+1.  **Nitrite Presence**: Identifies bacteria with the **nitrate reductase** enzyme (e.g., Gram-negative *E. coli*), which converts nitrates to nitrites, turning the pad **pink**.
+2.  **Leukocyte Levels**: Detects inflammation (pyuria). In a healthy patient, leukocytes are minimal; infection causes a dramatic increase, shifting the pad color from **beige to brown or purple**.
+3.  **Alkaline pH**: Identifies bacteria with the **urease enzyme** (e.g., *Proteus*). These bacteria convert urea to ammonia, making urine more alkaline (**pH > 7.5**).
+
+---
+
 ## Program 1 — Calibrate (run once)
 
 Builds a colour→concentration model from your chart measurements.

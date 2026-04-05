@@ -29,17 +29,22 @@ def evaluate_diagnoses(results: dict[str, Any]) -> list[str]:
     bilirubin = get_num("bilirubin")
     urobilinogen = get_num("urobilinogen")
     sg = get_num("sp_gravity")
+    ph = get_num("pH")
     
     # 1. UTI Sub-classification
-    # Trace leukocytes is usually ~15 cells/uL. 
-    if leukocytes > 10.0 or nitrite == "POSITIVE":
+    # UTI identification uses three primary biomarkers: Nitrite, Leukocytes, and pH.
+    if leukocytes > 10.0 or nitrite == "POSITIVE" or ph > 7.5:
         if nitrite == "POSITIVE":
-            diagnoses.append("Gram-Negative Bacterial UTI (e.g. E. coli or Klebsiella) - Indicated by Positive Leukocyte Esterase combined with nitrate reductase activity (Positive Nitrite).")
+            diagnoses.append("Gram-Negative Bacterial UTI (e.g. E. coli or Klebsiella) - Indicated by Positive Leukocyte Esterase and bacterial nitrate reductase activity (Positive Nitrite). Pad color typically shifts to PINK.")
+        
+        elif ph > 7.5:
+            diagnoses.append("Urease-Positive Bacterial UTI (e.g. Proteus or Klebsiella) - Indicated by highly alkaline urine (pH > 7.5) caused by the urease enzyme converting urea to ammonia. Often associated with struvite stone risk.")
+            
         else:
             if blood > 15.0:
                 diagnoses.append("Viral Hemorrhagic Cystitis or Gram-Positive Bacterial UTI - Indicated by inflammation (Positive Leukocytes) and Hematuria (Blood in urine) without bacterial nitrate reductase.")
             else:
-                diagnoses.append("Gram-Positive Bacterial UTI (e.g. Staphylococcus or Enterococcus) - Indicated by pyuria (Positive Leukocytes) without nitrate reductase.")
+                diagnoses.append("Gram-Positive Bacterial UTI (e.g. Staphylococcus or Enterococcus) - Indicated by pyuria (Positive Leukocytes shifting pad from BEIGE to BROWN/PURPLE) without nitrate reductase.")
 
 
     # 2. Liver & Biliary Screening

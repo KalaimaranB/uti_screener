@@ -8,13 +8,17 @@ The `api/clinical_classifier.py` engine translates raw chemical concentration da
 Because urinalysis is primarily a screening tool, the classifier evaluates **hard-coded biomarker logic** rather than "black box" machine learning models. This provides transparency and high clinical interpretability.
 
 ### 1. Urinary Tract Infection (UTI) Subclassification
-Urinary infections elicit an inflammatory response (pyuria), typically raising **Leukocyte Esterase** levels. However, the specific bacterial strain is identified by the **Nitrite** test:
+Our detection pipeline evaluates three primary biomarkers to identify a UTI: **Nitrite presence**, **Leukocyte presence**, and **increased pH**. 
 
-- **Gram-Negative Bacteria:** Pathogens such as *E. coli* possess **nitrate reductase**, which converts urine nitrates into nitrites.
+- **Leukocyte Response:** While healthy urine contains minimal leukocytes, an infection triggers a dramatic inflammatory response (pyuria), shifting the reagent pad from **beige to brown or purple**.
+- **Nitrate Reductase (Gram-Negative):** Bacteria like *E. coli* possess the **nitrate reductase** enzyme, which converts nitrates to nitrites. This chemical reaction turns the corresponding pad **pink**. 
   - **Match**: `Positive Leukocytes` + `Positive Nitrites`.
   - **Source**: [[PMC4408713]](https://pmc.ncbi.nlm.nih.gov/articles/PMC4408713/)
-- **Gram-Positive Bacteria:** Pathogens like *Staph. saprophyticus* do **not** possess nitrate reductase.
-  - **Match**: `Positive Leukocytes` + `Negative Nitrites`.
+- **Urease Enzyme (Alkaline pH):** Pathogens such as *Proteus* or *Klebsiella* carry the **urease enzyme**, which splits urea into ammonia. This mechanism makes the urine significantly more alkaline (**pH > 7.5**).
+  - **Match**: `Positive Leukocytes` + `pH > 7.5`.
+  - **Source**: [[PMC6351000]](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6351000/)
+- **Gram-Positive Bacteria:** Certain pathogens like *Staph. saprophyticus* do **not** possess nitrate reductase.
+  - **Match**: `Positive Leukocytes` + `Negative Nitrites` + `Neutral pH`.
   - **Source**: [[PMC85454]](https://pmc.ncbi.nlm.nih.gov/articles/PMC85454/)
 
 ### 2. Metabolic Disorders (Diabetes & DKA)
@@ -43,6 +47,7 @@ For strict verification of the implemented code logic, find the specific claims 
 |----------|---------|-------------|
 | **UTI Sensitivity** | [PMC4408713](https://pmc.ncbi.nlm.nih.gov/articles/PMC4408713/) | Table 2 (Combined Nitrite/Leukocyte response) |
 | **Bacterial Strain** | [PMC85454](https://pmc.ncbi.nlm.nih.gov/articles/PMC85454/) | "Results" (paragraph 4) regarding nitrate reductase |
+| **Urease Activity** | [PMC6351000](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6351000/) | Section "Urease and UTI" regarding pH elevation |
 | **Bilirubin Excretion** | [PMC10259638](https://pmc.ncbi.nlm.nih.gov/articles/PMC10259638/) | "Introduction" explaining water-soluble conjugation |
 | **Kidney Filtration** | [NBK564390](https://www.ncbi.nlm.nih.gov/books/NBK564390/) | "Pathophysiology" of the glomerular capillary wall |
 | **Transient Protein** | [PMC12703532](https://pmc.ncbi.nlm.nih.gov/articles/PMC12703532/) | "Transient Proteinuria" subsection |
