@@ -41,10 +41,7 @@ def evaluate_diagnoses(results: dict[str, Any]) -> list[str]:
             diagnoses.append("Urease-Positive Bacterial UTI (e.g. Proteus or Klebsiella) - Indicated by highly alkaline urine (pH > 7.5) caused by the urease enzyme converting urea to ammonia. Often associated with struvite stone risk.")
             
         else:
-            if blood > 15.0:
-                diagnoses.append("Viral Hemorrhagic Cystitis or Gram-Positive Bacterial UTI - Indicated by inflammation (Positive Leukocytes) and Hematuria (Blood in urine) without bacterial nitrate reductase.")
-            else:
-                diagnoses.append("Gram-Positive Bacterial UTI (e.g. Staphylococcus or Enterococcus) - Indicated by pyuria (Positive Leukocytes shifting pad from BEIGE to BROWN/PURPLE) without nitrate reductase.")
+            diagnoses.append("Gram-Positive Bacterial UTI (e.g. Staphylococcus or Enterococcus) - Indicated by pyuria (Positive Leukocytes shifting pad from BEIGE to BROWN/PURPLE) without nitrate reductase.")
 
 
     # 2. Liver & Biliary Screening

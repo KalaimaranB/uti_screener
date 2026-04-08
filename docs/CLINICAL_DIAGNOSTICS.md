@@ -55,6 +55,7 @@ For strict verification of the implemented code logic, find the specific claims 
 ---
 
 ## 🔗 Related Documentation
+- [Decision Tree (Quantified)](DECISION_TREE.md) — Exact numerical thresholds and logic paths.
 - [Algorithm Design](ALGORITHM.md) — How the raw pixels are converted to colors.
 - [API Reference](API_REFERENCE.md) — How to call the `evaluate_diagnoses()` function.
 
