@@ -13,7 +13,6 @@ The following table lists the specific markers and numerical values used to trig
 | **Leukocytes** | cells/uL | `> 10.0` | Indicates inflammation/pyuria. |
 | **Nitrite** | Categorical | `"POSITIVE"` | Indicates bacterial nitrate reductase activity. |
 | **pH** | pH units | `> 7.5` | Indicates alkaline urine (often urease-producing bacteria). |
-| **Blood** | cells/uL | `> 15.0` | Indicates hematuria. |
 | **Protein** | g/L | `> 0.3` | Indicates clinically significant proteinuria (> Trace). |
 | **Specific Gravity** | SG | `> 1.025` | Indicates highly concentrated urine. |
 | **Bilirubin** | umol/L | `> 0` | Any detectable bilirubin is abnormal. |
@@ -21,49 +20,77 @@ The following table lists the specific markers and numerical values used to trig
 
 ---
 
-## 🌲 Decision Logic Flow
+## 🌲 Diagnostic Flowchart
 
-The diagnostic engine evaluates results in the following priority order:
-
-### 1. Urinary Tract Infection (UTI) Pipeline
-Starts if any primary UTI marker is positive: `Leukocytes > 10.0` OR `Nitrite == "POSITIVE"` OR `pH > 7.5`.
+The screening engine evaluates results in a sequential pipeline. Multiple diagnoses can be triggered simultaneously if multiple conditions are met.
 
 ```mermaid
 graph TD
-    Start{UTI Marker Positive?}
-    Start -- No --> Liver[Next: Liver Check]
-    Start -- Yes --> NitriteCheck{Nitrite POSITIVE?}
+    Start([Start Analysis]) --> Extract[Extract Values from Strip]
     
-    NitriteCheck -- Yes --> GramNeg[Gram-Negative Bacterial UTI]
-    NitriteCheck -- No --> PhCheck{pH > 7.5?}
+    %% 1. UTI
+    Extract --> UTI_Check{UTI Marker?<br/>'Leuk > 10' OR 'Nitrite +' OR 'pH > 7.5'}
+    UTI_Check -- Yes --> Nitrite_Match{Nitrite POSITIVE?}
+    Nitrite_Match -- Yes --> GramNeg[Gram-Negative Bacterial UTI]
+    Nitrite_Match -- No --> Ph_Match{pH > 7.5?}
+    Ph_Match -- Yes --> Urease[Urease-Positive Bacterial UTI]
+    Ph_Match -- No --> GramPos[Gram-Positive Bacterial UTI]
     
-    PhCheck -- Yes --> Urease[Urease-Positive Bacterial UTI]
-    PhCheck -- No --> BloodCheck{Blood > 15.0?}
-    
-    BloodCheck -- Yes --> Viral[Viral / Gram-Positive UTI with Hematuria]
-    BloodCheck -- No --> GramPos[Gram-Positive Bacterial UTI]
+    %% 2. Liver
+    UTI_Check -- No --> Liver_Section
+    GramNeg --> Liver_Section
+    Urease --> Liver_Section
+    GramPos --> Liver_Section
+
+    subgraph Liver_Biliary [Liver & Biliary Screen]
+    Liver_Section[Evaluate Liver Markers] --> Bil_Pos{Bilirubin > 0?}
+    Bil_Pos -- Yes --> Bil_Diag[Bilirubinuria detected]
+    Bil_Pos -- No --> Uro_High{Urobilinogen > 2.0?}
+    Uro_High -- Yes --> Uro_Diag[Elevated Urobilinogen]
+    Uro_High -- No --> Biliary_Obs{Uro == 0 AND Bil > 0?}
+    Biliary_Obs -- Yes --> Obs_Diag[Possible Biliary Obstruction]
+    Biliary_Obs -- No --> Kidney_Section
+    Bil_Diag --> Kidney_Section
+    Uro_Diag --> Kidney_Section
+    Obs_Diag --> Kidney_Section
+    end
+
+    %% 3. Kidney & Systemic
+    subgraph Kidney_Systemic [Kidney & Systemic]
+    Kidney_Section[Evaluate Kidney/SG] --> Pro_Pos{Protein > 0.3?}
+    Pro_Pos -- Yes --> Pro_Diag[Glomerular / Renal Disease]
+    Pro_Pos -- No --> SG_High{SG > 1.025?}
+    SG_High -- Yes --> SG_Diag[Dehydration]
+    SG_High -- No --> Normal_Check{Any Diagnosis Added?}
+    Pro_Diag --> SG_High
+    SG_Diag --> Normal_Check
+    end
+
+    %% Final
+    Normal_Check -- No --> Normal_Diag[NORMAL STATUS]
+    Normal_Check -- Yes --> Finish([End Analysis])
+    Normal_Diag --> Finish
 ```
-
-### 2. Liver & Biliary Screen
-Evaluated independently of the UTI pipeline.
-
-*   **Bilirubinuria**: Triggered if `Bilirubin > 0`.
-*   **Elevated Urobilinogen**: Triggered if `Urobilinogen > 2.0`.
-*   **Biliary Obstruction Pattern**: Triggered if `Urobilinogen == 0` AND `Bilirubin > 0`.
-
-### 3. Renal & Kidney Function
-*   **Renal Disease**: Triggered if `Protein > 0.3 g/L`. This threshold captures values higher than "Trace" to avoid false positives from dehydration or exercise.
-
-### 4. Systemic Status
-*   **Dehydration**: Triggered if `Specific Gravity > 1.025`.
 
 ---
 
-## ⚖️ Normal Baseline
-If **no** indicators are triggered across any of the pathways above, the system returns a "Normal" status:
-> "Normal - No significant pathogenic biomarker combinations detected."
+## ⚖️ Path Descriptions
+
+### 1. Urinary Tract Infection (UTI) Pipeline
+- **Gram-Negative Bacterial UTI**: Triggered by Nitrite detection.
+- **Urease-Positive Bacterial UTI**: Triggered by alkaline pH (> 7.5), suggesting organisms like *Proteus*.
+- **Gram-Positive Bacterial UTI**: Triggered by pyuria (Leukocytes > 10) without Nitrite or pH elevation.
+
+### 2. Liver & Biliary Screen
+- **Bilirubinuria**: Any positive Bilirubin result.
+- **Elevated Urobilinogen**: Values > 2.0 umol/L.
+- **Biliary Obstruction Pattern**: The combination of Bilirubinuria with absent Urobilinogen.
+
+### 3. Renal & Systemic Status
+- **Renal Disease**: Proteinuria (> 0.3 g/L) suggests glomerular damage.
+- **Dehydration**: High Specific Gravity (> 1.025) suggests concentrated urine.
 
 ---
 
 > [!TIP]
-> **Implementation Note:** The numerical values are derived from the `models/model.json` calibration. If you update the calibration swatches, ensure the code thresholds in `api/clinical_classifier.py` still align with the desired medical logic.
+> **Unit Consistency:** The numerical thresholds match the `models/model.json` units exactly. If you update the swatches in the model, verify that these logical cutoffs remain clinically valid for your training set.
