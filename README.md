@@ -1,6 +1,7 @@
 # Urinalysis Strip Analyzer
 
 A Python project for automated urinalysis strip reading using **3D Piecewise Polyline RGB Projection** and computer vision.
+A live model can be accessed here at :https://uti-screener.streamlit.app/.
 
 📄 **Documentation:**
 - **[Algorithm Deep-Dive](docs/ALGORITHM.md)** — How the 95% accuracy model works.
