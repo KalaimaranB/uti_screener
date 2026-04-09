@@ -1,0 +1,13 @@
+train: train/images
+val: train/images
+
+
+nc: 12
+names: ['Bilirubin', 'Blood', 'Glucose', 'Ketone', 'Leukocytes', 'Nitrite', 'Protein', 'SpGravity', 'Urobilinogen', 'background', 'pH', 'strip']
+
+roboflow:
+  workspace: hamoodh
+  project: urine-test-strips-main-3jtim
+  version: 1
+  license: Private
+  url: https://universe.roboflow.com/hamoodh/urine-test-strips-main-3jtim/dataset/1
